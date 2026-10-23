@@ -1,0 +1,61 @@
+From c7843d4101ff64454a3028e5d93cbb2f2df7ca11 Mon Sep 17 00:00:00 2001
+From: LyraCalc OS <lyracalc-os@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 12:00:00 +0200
+Subject: [PATCH] keyboard: Alt+O reports KEY_OVERLAY (0xE1), right Shift
+ reports as left Shift
+
+Alt+O shows and hides the LyraCalc OS status bar (KEY_PROG1 in the
+Linux driver).
+---
+ Core/Inc/keyboard.h | 1 +
+ Core/Src/keyboard.c | 8 +++++++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/Core/Inc/keyboard.h b/Core/Inc/keyboard.h
+index 43abe9f..b12b844 100644
+--- a/Core/Inc/keyboard.h
++++ b/Core/Inc/keyboard.h
+@@ -58,6 +58,7 @@ enum key_state {
+ #define KEY_END         0xD5
+ #define KEY_PAGE_UP     0xD6
+ #define KEY_PAGE_DOWN   0xd7
++#define KEY_OVERLAY     0xE1
+ 
+ #define KEY_CAPS_LOCK   0xC1
+ 
+diff --git a/Core/Src/keyboard.c b/Core/Src/keyboard.c
+index 8cbb596..f0d9592 100644
+--- a/Core/Src/keyboard.c
++++ b/Core/Src/keyboard.c
+@@ -171,7 +171,7 @@ static void transition_to(struct list_item * const p_item, const enum key_state
+ 
+     case MOD_SHR:
+ 		if (reg_is_bit_set(REG_ID_SYS_CFG, CFG_REPORT_MODS))
+-			chr = KEY_MOD_SHR;
++			chr = KEY_MOD_SHL;
+ 		break;
+ 
+     case MOD_SYM:
+@@ -207,6 +207,9 @@ static void transition_to(struct list_item * const p_item, const enum key_state
+ 					} else if (chr == 'I') {
+ 						output = 1;
+ 						chr = KEY_INSERT;
++					} else if (chr == 'O') {
++						output = 1;
++						chr = KEY_OVERLAY;
+ 					}
+ 				}
+ 
+@@ -216,6 +219,9 @@ static void transition_to(struct list_item * const p_item, const enum key_state
+ 					} else if(chr == 'I'){
+ 						output = 1;
+ 						chr = KEY_INSERT;
++					} else if (chr == 'O') {
++						output = 1;
++						chr = KEY_OVERLAY;
+ 					}
+ 				}
+ 
+-- 
+2.43.0
+

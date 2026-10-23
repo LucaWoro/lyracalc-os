@@ -1,0 +1,12 @@
+{
+    "colorscheme": "simple",
+    "clipboard": "internal",
+    "softwrap": true,
+    "ruler": true,
+    "tabsize": 4,
+    "tabstospaces": true,
+    "autoclose": true,
+    "mkparents": true,
+    "savecursor": true,
+    "linter": true
+}

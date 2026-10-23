@@ -1,0 +1,11 @@
+[Unit]
+Description=PicoCalc battery monitor
+After=picocalc-overlay.service
+
+[Service]
+ExecStart=/usr/local/sbin/picocalc-battery
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

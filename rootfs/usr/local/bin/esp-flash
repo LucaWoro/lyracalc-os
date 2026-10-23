@@ -1,0 +1,24 @@
+#!/bin/bash
+# Flash MicroPython to an ESP32 on USB
+#   esp-flash            detect the chip, use the matching firmware
+#   esp-flash FILE.bin   use this file
+# Firmware: /usr/local/share/lyracalc/esp-firmware and ~/esp/firmware
+PORT=$(ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | head -1)
+[ -n "$PORT" ] || { echo "No ESP found. Is it plugged in?"; exit 1; }
+echo "ESP on $PORT, detecting chip..."
+CHIP=$(python3 -m esptool --port "$PORT" chip_id 2>/dev/null | awk -F'is ' '/Chip is/ {print $2}' | awk '{print $1}')
+case "$CHIP" in
+  ESP32-S2*) OFF=0x1000; BOARD=ESP32_GENERIC_S2 ;;
+  ESP32-S3*) OFF=0x0;    BOARD=ESP32_GENERIC_S3 ;;
+  ESP32-C3*) OFF=0x0;    BOARD=ESP32_GENERIC_C3 ;;
+  ESP32-C6*) OFF=0x0;    BOARD=ESP32_GENERIC_C6 ;;
+  ESP32*)    OFF=0x1000; BOARD=ESP32_GENERIC ;;
+  *) echo "Chip not detected. Hold the BOOT button, plug the ESP in again and retry."; exit 1 ;;
+esac
+FW="$1"
+[ -n "$FW" ] || FW=$(ls -t "$HOME"/esp/firmware/"$BOARD"-[0-9]*.bin /usr/local/share/lyracalc/esp-firmware/"$BOARD"-[0-9]*.bin 2>/dev/null | head -1)
+[ -f "$FW" ] || { echo "No firmware for $BOARD found. Get it from micropython.org/download and put it in ~/esp/firmware."; exit 1; }
+echo "Chip: $CHIP -> $(basename "$FW") at address $OFF"
+python3 -m esptool --port "$PORT" erase_flash
+python3 -m esptool --port "$PORT" --baud 460800 write_flash -z $OFF "$FW"
+echo "Done. Press RESET or plug the ESP in again."

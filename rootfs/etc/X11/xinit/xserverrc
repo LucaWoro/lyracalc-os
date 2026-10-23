@@ -1,0 +1,4 @@
+#!/bin/sh
+# key repeat from /etc/picocalc.conf
+. /usr/local/lib/picocalc/input.sh
+exec /usr/bin/X -nolisten tcp -ardelay "$KEY_REPEAT_DELAY" -arinterval "$((1000 / KEY_REPEAT_RATE))" "$@"

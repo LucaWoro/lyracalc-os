@@ -1,0 +1,32 @@
+#!/bin/bash
+# First boot: grow the root filesystem, create SSH host keys. Runs while /etc/picocalc-firstboot exists.
+FLAG=/etc/picocalc-firstboot
+[ -e "$FLAG" ] || exit 0
+log() { echo "picocalc-firstboot: $*"; }
+
+grow_root() {
+  [ "$(findmnt -no FSTYPE /)" = ext4 ] || { log "root is not ext4, not resizing"; return; }
+  local name disk part start p s size end
+  name=$(basename "$(readlink -f "/sys/dev/block/$(mountpoint -d /)")")
+  disk=$(basename "$(readlink -f "/sys/class/block/$name/..")")
+  part=$(cat "/sys/class/block/$name/partition")
+  start=$(cat "/sys/class/block/$name/start")
+  # the root partition must be the last one on the card
+  for p in /sys/class/block/"$disk"/"$disk"*; do
+    s=$(cat "$p/start"); [ "$s" -gt "$start" ] && { log "root is not the last partition, not resizing"; return; }
+  done
+  size=$(cat "/sys/class/block/$disk/size")
+  end=$(( start + $(cat "/sys/class/block/$name/size") ))
+  if [ $(( size - end )) -lt 65536 ]; then log "no free space after root, nothing to do"; return; fi
+  log "growing /dev/$name to fill /dev/$disk"
+  sfdisk --relocate gpt-bak-std "/dev/$disk" >/dev/null 2>&1 || true
+  echo ", +" | sfdisk --no-reread --force -N "$part" "/dev/$disk" >/dev/null 2>&1 || { log "sfdisk failed"; return; }
+  partx -u "/dev/$disk" || true
+  resize2fs "/dev/$name" && log "root filesystem now uses the whole card"
+}
+
+grow_root
+ssh-keygen -A && log "SSH host keys ready"
+[ -f /etc/picocalc.conf ] || cp /usr/local/share/lyracalc/picocalc.conf.default /etc/picocalc.conf
+rm -f "$FLAG"
+sync

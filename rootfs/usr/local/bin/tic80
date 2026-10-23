@@ -1,0 +1,31 @@
+#!/bin/bash
+# Start TIC-80 on the PicoCalc screen
+#   tic80              TIC-80 console (type: surf = online carts, help, exit)
+#   tic80 game.tic     start a cart directly
+# Carts are kept in /root/tic80. If an SD card is in, its tic80 folder shows up as sd/
+FS=/root/tic80
+mkdir -p "$FS"
+if mountpoint -q /mnt/sd; then
+  mkdir -p /mnt/sd/tic80 2>/dev/null
+  [ -e "$FS/sd" ] || ln -s /mnt/sd/tic80 "$FS/sd"
+fi
+K=/sys/module/picocalc_kbd/parameters
+# mouse keys on; PICO-8 game mode stays off while TIC-80 runs
+echo 0 > $K/p_game 2>/dev/null
+echo 1 > $K/p_mouse 2>/dev/null
+( while [ -e /proc/$$ ]; do
+    read -r g < $K/p_game 2>/dev/null; [ "$g" = 1 ] && echo 0 > $K/p_game 2>/dev/null
+    sleep 0.3
+  done ) &
+GUARD=$!
+trap 'kill $GUARD 2>/dev/null; echo 0 > $K/p_game 2>/dev/null; echo 0 > $K/p_mouse 2>/dev/null' EXIT
+export SDL_AUDIODRIVER=alsa
+[ -n "$AUDIODEV" ] || [ -d /sys/module/picocalc_snd_pwm ] || export SDL_AUDIODRIVER=dummy
+export SDL_VIDEODRIVER=x11
+export SDL_RENDER_DRIVER=software
+ARGS=()
+for a in "$@"; do [ -e "$a" ] && a=$(readlink -f "$a"); ARGS+=("$a"); done
+# full 320x320 window, 240x136 picture scaled to the full width without border
+export TIC80_WINDOW=320x320
+export TIC80_NOBORDER=1
+xinit /usr/local/lib/tic80/tic80 --soft --skip --fs="$FS" "${ARGS[@]}" -- :0 vt2 -nocursor -br -quiet > /tmp/tic80.log 2>&1

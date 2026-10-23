@@ -1,0 +1,372 @@
+From 5ee4beb90b6af3a8d789d60dc9c1b96b3ce9c98d Mon Sep 17 00:00:00 2001
+From: LyraCalc OS <lyracalc-os@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 12:00:00 +0200
+Subject: [PATCH 1/6] ili9488: status bar overlay device, faster refresh, no
+ snow at power-on
+
+- /dev/fb_overlay: a program writes N lines of RGB565; the driver always
+  sends them to the top of the panel instead of the framebuffer content
+- refresh rate 150 fps by default, p_fps= to override
+- p_hwswap=0 selects the CPU byte swap path
+- display on only after the screen was cleared
+- SPI clock limit raised to 100 MHz (rockchip SPI and panel node)
+---
+ .../arm/boot/dts/rk3506-luckfox-lyra.dtsi     |   2 +-
+ kernel-6.1/drivers/spi/spi-rockchip.c         |   2 +-
+ kernel-6.1/drivers/video/fbdev/ili9488_fb.c   | 192 +++++++++++++++---
+ 3 files changed, 170 insertions(+), 26 deletions(-)
+
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
+index c824249a..43964752 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
+@@ -1220,7 +1220,7 @@
+ 	ili9488: ili9488@0 {
+ 		status = "okay";
+ 		compatible = "ilitek,ili9488";
+-        spi-max-frequency = <80000000>;
++        spi-max-frequency = <100000000>;
+         /* spi-max-frequency = <24000000>; */
+         /* spi-max-frequency = <10000000>; */
+ 		reg = <0>;
+diff --git a/kernel-6.1/drivers/spi/spi-rockchip.c b/kernel-6.1/drivers/spi/spi-rockchip.c
+index 725edce9..7c811d18 100644
+--- a/kernel-6.1/drivers/spi/spi-rockchip.c
++++ b/kernel-6.1/drivers/spi/spi-rockchip.c
+@@ -156,7 +156,7 @@
+ #define TXDMA					(1 << 1)
+ 
+ /* sclk_out: spi master internal logic in rk3x can support 50Mhz */
+-#define MAX_SCLK_OUT				50000000U
++#define MAX_SCLK_OUT				100000000U
+ /* max sclk of driver strength 4mA */
+ #define IO_DRIVER_4MA_MAX_SCLK_OUT	24000000U
+ 
+diff --git a/kernel-6.1/drivers/video/fbdev/ili9488_fb.c b/kernel-6.1/drivers/video/fbdev/ili9488_fb.c
+index c105c739..378e12d5 100644
+--- a/kernel-6.1/drivers/video/fbdev/ili9488_fb.c
++++ b/kernel-6.1/drivers/video/fbdev/ili9488_fb.c
+@@ -23,6 +23,7 @@
+ #include <linux/uaccess.h>
+ 
+ #include <linux/fb.h>
++#include <linux/miscdevice.h>
+ #include <linux/fbcon.h>
+ #include <video/mipi_display.h>
+ 
+@@ -33,6 +34,19 @@ module_param(p_3bit_mode, int, 0660);
+ 
+ static int p_dither = 0;
+ module_param(p_dither, int, 0660);
++static int p_fps = 0;
++module_param(p_fps, int, 0444);
++static int p_hwswap = 1;
++module_param(p_hwswap, int, 0444);
++
++/* Status bar overlay: /dev/fb_overlay
++ * A program writes N full lines (N * 640 bytes, RGB565 like the framebuffer).
++ * The driver then always sends these lines to the top of the panel instead of
++ * the framebuffer content, so console text or X can never draw over them.
++ * The overlay disappears automatically when the device is closed (also when
++ * the program is killed). */
++#define OVL_MAX_ROWS 32
++
+ 
+ struct ili9488_par;
+ 
+@@ -97,6 +111,13 @@ struct ili9488_par {
+ 
+     u32             dirty_lines_start;
+     u32             dirty_lines_end;
++
++    /* status bar overlay */
++    struct miscdevice       ovl_misc;
++    struct mutex            ovl_lock;
++    u8                      *ovl_buf;
++    u32                     ovl_rows;
++    atomic_t                ovl_open;
+ };
+ 
+ #define gpio_put(d, v) gpiod_set_raw_value(d, v)
+@@ -198,8 +219,7 @@ static int ili9488_init_display(struct ili9488_par *priv)
+     write_reg(priv, 0xF7, 0xA9, 0x51, 0x2C, 0x82);  // Adjust Control 3
+     write_reg(priv, 0x11);                      // Exit Sleep
+     mdelay(120);
+-    write_reg(priv, 0x29);                      // Display on
+-    mdelay(120);
++    /* display on happens in probe, after the screen was cleared */
+     /*
+     write_reg(priv, 0x36);
+     write_reg(priv, 0x36, 0x01, 0x48);
+@@ -701,9 +721,25 @@ static int write_vmem_3bit(struct ili9488_par *par, size_t offset, size_t len)
+     return 0;
+ }
+ 
+-static int write_vmem(struct ili9488_par *par, size_t offset, size_t len)
++static int write_mem_hw16(struct ili9488_par *par, const void *src, size_t len)
+ {
+-    u16 *vmem16;
++    struct spi_transfer t = {
++        .tx_buf = src,
++        .len = len,
++        .bits_per_word = 16,
++    };
++    struct spi_message m;
++
++    gpio_put(par->gpio.dc, 1);
++    spi_message_init(&m);
++    spi_message_add_tail(&t, &m);
++    return spi_sync(par->spi, &m);
++}
++
++/* send len bytes of RGB565 pixels starting at src */
++static int write_mem(struct ili9488_par *par, const void *src, size_t len)
++{
++    const u16 *vmem16 = src;
+     u8 *txbuf = par->txbuf.buf;
+     size_t remain;
+     size_t to_copy;
+@@ -711,35 +747,29 @@ static int write_vmem(struct ili9488_par *par, size_t offset, size_t len)
+     int i;
+     int k;
+ 
+-    dev_dbg(par->dev, "%s, offset = %d, len = %d\n", __func__, offset, len);
++    if (p_hwswap)
++        return write_mem_hw16(par, src, len);
++
++    dev_dbg(par->dev, "%s, len = %d\n", __func__, len);
+ 
+     remain = len / 2;
+-    vmem16 = (u16 *)(par->fbinfo->screen_buffer + offset);
+ 
+     gpio_put(par->gpio.dc, 1);
+ 
+     /* non-buffered spi write */
+     if (!par->txbuf.buf)
+-        return fbtft_write_spi_wr(par, vmem16, len);
++        return fbtft_write_spi_wr(par, (void *)vmem16, len);
+ 
+     tx_array_size = par->txbuf.len / 3;
+ 
+     while (remain) {
+         to_copy = min(tx_array_size, remain);
+-        dev_dbg(par->fbinfo->device, "to_copy=%zu, remain=%zu\n",
+-                to_copy, remain - to_copy);
+ 
+         for (i = 0, k = 0; i < to_copy; i++)
+         {
+             txbuf[k++] = ((vmem16[i] & 0xFF00) >> 8) & 0xFF;
+             txbuf[k++] = (vmem16[i] & 0x00FF);
+-            //txbuf[k++] = ((vmem16[i] & 0x001F) << 3) & 0xFF;
+-            // txbuf[k++] = 255;
+-            // txbuf[k++] = 0;
+-            // txbuf[k++] = 0;
+-        } 
+-
+-//        memcpy(txbuf, vmem16, to_copy * 2);
++        }
+ 
+         /* send batch to device */
+         fbtft_write_spi_wr(par, txbuf, to_copy * 2);
+@@ -750,6 +780,16 @@ static int write_vmem(struct ili9488_par *par, size_t offset, size_t len)
+     return 0;
+ }
+ 
++/* set the address window and send lines start..end from src */
++static void send_lines(struct ili9488_par *par, const u8 *src,
++                       unsigned int start, unsigned int end)
++{
++    size_t len = (end - start + 1) * par->fbinfo->fix.line_length;
++
++    par->tftops->set_addr_win(par, 0, start, par->fbinfo->var.xres - 1, end);
++    write_mem(par, src, len);
++}
++
+ static void update_display(struct ili9488_par *par, unsigned int start_line,
+                            unsigned int end_line)
+ {
+@@ -779,21 +819,35 @@ static void update_display(struct ili9488_par *par, unsigned int start_line,
+     /* for each column, refresh dirty rows */
+ 
+     gpio_put(par->gpio.cs, 0);
+-    par->tftops->set_addr_win(par, 0, start_line, par->fbinfo->var.xres - 1, end_line);
+-
+-    offset = start_line * par->fbinfo->fix.line_length;
+-    len = (end_line - start_line + 1) * par->fbinfo->fix.line_length;
+ 
+     if (p_3bit_mode)
+     {
++        par->tftops->set_addr_win(par, 0, start_line, par->fbinfo->var.xres - 1, end_line);
++        offset = start_line * par->fbinfo->fix.line_length;
++        len = (end_line - start_line + 1) * par->fbinfo->fix.line_length;
+         if (p_dither)
+             write_vmem_3bit_dither(par, offset, len);
+-	else
++        else
+             write_vmem_3bit(par, offset, len);
+     }
+     else
+     {
+-        write_vmem(par, offset, len);
++        u32 ll = par->fbinfo->fix.line_length;
++
++        /* lines covered by the status bar overlay */
++        mutex_lock(&par->ovl_lock);
++        if (par->ovl_rows && start_line < par->ovl_rows) {
++            unsigned int oend = min(end_line, par->ovl_rows - 1);
++
++            send_lines(par, par->ovl_buf + start_line * ll, start_line, oend);
++            start_line = oend + 1;
++        }
++        mutex_unlock(&par->ovl_lock);
++
++        /* the rest from the framebuffer */
++        if (start_line <= end_line)
++            send_lines(par, (u8 *)par->fbinfo->screen_buffer + start_line * ll,
++                       start_line, end_line);
+     }
+ 
+     gpio_put(par->gpio.cs, 1);
+@@ -909,6 +963,73 @@ static ssize_t ili9488_fb_write(struct fb_info *info, const char __user *buf,
+     return 0;
+ }
+ 
++/* ---- status bar overlay device (/dev/fb_overlay) ---- */
++
++static struct ili9488_par *ovl_par(struct file *f)
++{
++    return container_of(f->private_data, struct ili9488_par, ovl_misc);
++}
++
++static int ovl_open(struct inode *inode, struct file *f)
++{
++    struct ili9488_par *par = ovl_par(f);
++
++    if (atomic_cmpxchg(&par->ovl_open, 0, 1))
++        return -EBUSY;
++    return nonseekable_open(inode, f);
++}
++
++static ssize_t ovl_write(struct file *f, const char __user *buf,
++                         size_t count, loff_t *ppos)
++{
++    struct ili9488_par *par = ovl_par(f);
++    u32 ll = par->fbinfo->fix.line_length;
++    u32 rows, old;
++
++    if (p_3bit_mode)
++        return -EOPNOTSUPP;
++    if (count == 0 || count % ll || count / ll > OVL_MAX_ROWS)
++        return -EINVAL;
++    rows = count / ll;
++
++    mutex_lock(&par->ovl_lock);
++    if (copy_from_user(par->ovl_buf, buf, count)) {
++        mutex_unlock(&par->ovl_lock);
++        return -EFAULT;
++    }
++    old = par->ovl_rows;
++    par->ovl_rows = rows;
++    mutex_unlock(&par->ovl_lock);
++
++    ili9488_mkdirty(par->fbinfo, 0, max(rows, old));
++    return count;
++}
++
++static int ovl_release(struct inode *inode, struct file *f)
++{
++    struct ili9488_par *par = ovl_par(f);
++    u32 old;
++
++    mutex_lock(&par->ovl_lock);
++    old = par->ovl_rows;
++    par->ovl_rows = 0;
++    mutex_unlock(&par->ovl_lock);
++
++    /* show the framebuffer content again where the bar was */
++    if (old)
++        ili9488_mkdirty(par->fbinfo, 0, old);
++    atomic_set(&par->ovl_open, 0);
++    return 0;
++}
++
++static const struct file_operations ovl_fops = {
++    .owner   = THIS_MODULE,
++    .open    = ovl_open,
++    .write   = ovl_write,
++    .release = ovl_release,
++    .llseek  = no_llseek,
++};
++
+ /* from pxafb.c */
+ static unsigned int chan_to_field(unsigned int chan, struct fb_bitfield *bf)
+ {
+@@ -980,7 +1101,7 @@ static const struct ili9488_display display = {
+     .xres = 320,
+     .yres = 320,
+     .bpp = 16,
+-    .fps = 30,
++    .fps = 150,
+ };
+ 
+ static const struct ili9488_display display_3bit = {
+@@ -1127,7 +1248,9 @@ static int ili9488_probe(struct spi_device *spi)
+     }
+     else
+     {
+-        fbdefio->delay = HZ / display.fps;
++        fbdefio->delay = HZ / (p_fps > 0 ? p_fps : display.fps);
++        if (!fbdefio->delay)
++            fbdefio->delay = 1;
+     }
+     fbdefio->deferred_io = ili9488_deferred_io;
+     fb_deferred_io_init(info);
+@@ -1170,10 +1293,17 @@ static int ili9488_probe(struct spi_device *spi)
+ 
+     spin_lock_init(&par->dirty_lock);
+     init_completion(&par->complete);
++    mutex_init(&par->ovl_lock);
++    atomic_set(&par->ovl_open, 0);
++    par->ovl_rows = 0;
++    par->ovl_buf = devm_kzalloc(dev, OVL_MAX_ROWS * info->fix.line_length, GFP_KERNEL);
+     ili9488_of_config(par);
+     ili9488_hw_init(par);
+ 
+     update_display(par, 0, par->fbinfo->var.yres - 1);
++    gpio_put(par->gpio.cs, 0);
++    write_reg(par, 0x29);   /* display on only now (screen is cleared): no snow */
++    gpio_put(par->gpio.cs, 1);
+     /* framebuffer register */
+     rc = register_framebuffer(info);
+     if (rc < 0) {
+@@ -1184,6 +1314,18 @@ static int ili9488_probe(struct spi_device *spi)
+     event.info = info;
+     fb_notifier_call_chain(0x0F, &event);
+ 
++    if (par->ovl_buf) {
++        par->ovl_misc.minor = MISC_DYNAMIC_MINOR;
++        par->ovl_misc.name = "fb_overlay";
++        par->ovl_misc.fops = &ovl_fops;
++        if (misc_register(&par->ovl_misc)) {
++            par->ovl_misc.fops = NULL;
++            dev_warn(dev, "could not register /dev/fb_overlay\n");
++        }
++        else
++            dev_info(dev, "status bar overlay: /dev/fb_overlay\n");
++    }
++
+     printk("%zu KB buffer memory\n", par->txbuf.len >> 10);
+     printk("%d KB video memory\n", info->fix.smem_len >> 10);
+ 
+@@ -1199,6 +1341,8 @@ static void ili9488_remove(struct spi_device *spi)
+     struct ili9488_par *par = spi_get_drvdata(spi);
+ 
+     printk("%s\n", __func__);
++    if (par->ovl_misc.fops)
++        misc_deregister(&par->ovl_misc);
+     fb_deferred_io_cleanup(par->fbinfo);
+ 
+     unregister_framebuffer(par->fbinfo);
+-- 
+2.43.0
+

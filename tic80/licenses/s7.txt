@@ -1,0 +1,28 @@
+ *
+ *   derived from TinyScheme 1.39, but not a single byte of that code remains
+ *   SPDX-License-Identifier: 0BSD
+ *
+ * Bill Schottstaedt, bil@ccrma.stanford.edu
+ *
+ * Mike Scholz provided the FreeBSD support (complex trig funcs, etc)
+ * Rick Taube, Andrew Burnson, Donny Ward, Greg Santucci, and Christos Vagias provided the MS Visual C++ support
+ * Kjetil Matheussen provided the mingw support
+ *
+ * Documentation is in s7.h and s7.html.
+ * s7test.scm is a regression test.
+ * repl.scm is a vt100-based listener.
+ * nrepl.scm is a notcurses-based listener.
+ * cload.scm and lib*.scm tie in various C libraries.
+ * lint.scm checks Scheme code for infelicities.
+ * r7rs.scm implements some of r7rs (small).
+ * write.scm currrently has pretty-print.
+ * mockery.scm has the mock-data definitions.
+ * reactive.scm has reactive-set and friends.
+ * stuff.scm has some stuff.
+ * profile.scm has code to display profile data.
+ * debug.scm has debugging aids.
+ * case.scm has case*, an extension of case to pattern matching.
+ * timing tests are in the s7 tools directory
+ *
+ * s7.c is organized as follows:
+ *    structs and type flags

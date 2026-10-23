@@ -1,0 +1,14 @@
+[Unit]
+Description=PicoCalc first boot (grow filesystem, SSH host keys)
+ConditionPathExists=/etc/picocalc-firstboot
+DefaultDependencies=no
+After=local-fs.target
+Before=ssh.socket ssh.service picocalc-setup-wizard.service sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/picocalc-firstboot
+TimeoutStartSec=600
+
+[Install]
+WantedBy=sysinit.target

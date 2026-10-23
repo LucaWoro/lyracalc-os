@@ -1,0 +1,7 @@
+#!/bin/bash
+# Switch WiFi off
+. /usr/local/lib/picocalc/wifi-common.sh
+[ -n "$IF" ] || { echo "No WiFi stick found."; exit 0; }
+systemctl stop "wifi@$IF.service"
+ip link set "$IF" down 2>/dev/null
+echo "WiFi off ($IF)."

@@ -1,0 +1,6 @@
+#!/bin/bash
+# Start (or restart) WiFi in the background without waiting
+. /usr/local/lib/picocalc/wifi-common.sh
+[ -n "$IF" ] || { echo "No WiFi stick found. Unplug the stick and plug it in again."; exit 1; }
+systemctl restart --no-block "wifi@$IF.service"
+echo "WiFi is starting on $IF (connected in about 10 s)."

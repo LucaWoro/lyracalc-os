@@ -1,0 +1,9 @@
+[Unit]
+Description=Quiet console after boot
+
+[Service]
+Type=idle
+ExecStart=/usr/local/sbin/boot-done.sh
+
+[Install]
+WantedBy=multi-user.target

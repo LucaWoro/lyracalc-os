@@ -1,0 +1,79 @@
+#!/bin/bash
+# All WiFi settings in one menu
+. /usr/local/lib/picocalc/wifi-common.sh
+
+pick_saved() {   # sets PID / PNAME
+  mapfile -t S < <(wcli list_networks | tail -n +2 | awk -F'\t' '{print $1 "\t" $2}')
+  [ ${#S[@]} -gt 0 ] || { echo "No saved networks."; return 1; }
+  local i
+  for i in "${!S[@]}"; do printf '%2d) %s\n' $((i + 1)) "${S[$i]#*$'\t'}"; done
+  read -rp "Number (Enter = cancel): " N
+  [ -n "$N" ] || return 1
+  [[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -ge 1 ] && [ "$N" -le ${#S[@]} ] || { echo "Invalid number."; return 1; }
+  PID=${S[$((N - 1))]%%$'\t'*}; PNAME=${S[$((N - 1))]#*$'\t'}
+}
+
+ready() { [ -n "$IF" ] && [ "$(wcli ping)" = "PONG" ] && return 0; [ -z "$IF" ] && echo "No WiFi stick found." || echo "WiFi is off. Turn it on with: wifion"; return 1; }
+
+status() {
+  IF=$(wifi_if)
+  if [ -z "$IF" ]; then echo "Stick:     not found"; return; fi
+  echo "Stick:     $IF ($(basename "$(readlink /sys/class/net/$IF/device/driver)"), mode $(wifi_mode))"
+  if [ "$(wcli ping)" != "PONG" ]; then echo "WiFi:      off"; return; fi
+  local ssid st ip rssi
+  ssid=$(current_ssid); st=$(wcli status | sed -n 's/^wpa_state=//p'); ip=$(get_ip)
+  rssi=$(wcli signal_poll | sed -n 's/^RSSI=//p')
+  echo "WiFi:      on ($st)"
+  echo "Network:   ${ssid:--}"
+  [ -n "$rssi" ] && echo "Signal:    $(sig_pct "$rssi")% ($rssi dBm)"
+  echo "IP:        ${ip:--}"
+  echo "Autostart: $( [ "$(conf_get WIFI_AUTOSTART)" = off ] && echo off || echo on )"
+  echo "Country:   $(sed -n 's/^country=//p' "$CONF" | head -1 | grep . || echo not set)"
+}
+
+while true; do
+  echo ""
+  echo "=== WiFi settings ==="
+  echo " 1) Status"
+  echo " 2) Saved networks"
+  echo " 3) Connect to a saved network"
+  echo " 4) Forget a saved network"
+  echo " 5) Add a hidden network"
+  echo " 6) Set preferred network"
+  echo " 7) Start WiFi automatically when plugged in: $( [ "$(conf_get WIFI_AUTOSTART)" = off ] && echo off || echo on )"
+  echo " 8) WiFi country"
+  echo " 0) Exit"
+  read -rp "Choice: " C
+  echo ""
+  case "$C" in
+    1) status ;;
+    2) ready || continue
+       wcli list_networks | tail -n +2 | awk -F'\t' '{printf "%2d) %s%s\n", NR, $2, ($4 ~ /CURRENT/ ? "  (connected)" : "")}' | grep . || echo "No saved networks." ;;
+    3) ready && pick_saved && try_connect "$PID" 0 "$PNAME" ;;
+    4) ready && pick_saved || continue
+       wcli remove_network "$PID" >/dev/null; wcli save_config >/dev/null; chmod 600 "$CONF"
+       echo "Forgot: $PNAME" ;;
+    5) ready || continue
+       read -rp "Network name (exactly as written): " SSID
+       [ -n "$SSID" ] || continue
+       read -rp "Security: 1) WPA2  2) WPA3  3) open  [1]: " T
+       case "$T" in 2) SEC=WPA3 ;; 3) SEC=open ;; *) SEC=WPA2 ;; esac
+       add_and_connect "$SSID" "$SEC" 1 ;;
+    6) ready && pick_saved || continue
+       MAX=0
+       for id in $(wcli list_networks | tail -n +2 | cut -f1); do
+         p=$(wcli get_network "$id" priority); [[ "$p" =~ ^[0-9]+$ ]] && [ "$p" -gt "$MAX" ] && MAX=$p
+       done
+       wcli set_network "$PID" priority $((MAX + 1)) >/dev/null; wcli save_config >/dev/null; chmod 600 "$CONF"
+       echo "Preferred: $PNAME (used first when several saved networks are in range)" ;;
+    7) if [ "$(conf_get WIFI_AUTOSTART)" = off ]; then conf_set WIFI_AUTOSTART on; echo "WiFi now starts automatically."
+       else conf_set WIFI_AUTOSTART off; echo "WiFi no longer starts by itself. Use wifion."; fi ;;
+    8) read -rp "Two-letter country code, e.g. DE, AT, CH, US (Enter = cancel): " CC
+       CC=$(echo "$CC" | tr a-z A-Z)
+       [[ "$CC" =~ ^[A-Z][A-Z]$ ]] || { [ -n "$CC" ] && echo "Invalid code."; continue; }
+       if grep -q '^country=' "$CONF"; then sed -i "s/^country=.*/country=$CC/" "$CONF"; else sed -i "1i country=$CC" "$CONF"; fi; conf_set WIFI_COUNTRY "$CC"
+       echo "Country set to $CC. Takes effect after: wifion" ;;
+    0|"") exit 0 ;;
+    *) echo "Unknown choice." ;;
+  esac
+done

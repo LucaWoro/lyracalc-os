@@ -1,0 +1,19 @@
+#!/bin/bash
+# Midnight Commander with the SD card on the left and the PICO-8 carts on the right
+#   Tab = other side   F5 = copy   F6 = move   F8 = delete   F10 = quit
+#   Ctrl+\ = bookmarks (SD card, PICO-8 carts, ...)   Esc then 5 = F5 (works for all F keys)
+C=/root/.lexaloffle/pico-8/carts
+mkdir -p "$C"
+H=$HOME/.config/mc/hotlist
+if [ ! -f "$H" ]; then
+  mkdir -p "${H%/*}"
+  cat > "$H" << HOT
+ENTRY "SD card" URL "/mnt/sd"
+ENTRY "SD card: pico8 folder" URL "/mnt/sd/pico8"
+ENTRY "PICO-8 carts" URL "$C"
+ENTRY "Home" URL "$HOME"
+HOT
+fi
+LEFT=$HOME
+mountpoint -q /mnt/sd && LEFT=/mnt/sd
+exec mc "${1:-$LEFT}" "${2:-$C}"

@@ -1,0 +1,49 @@
+# category|package|description (max 20 characters)
+Tools|tmux|Split the terminal
+Tools|htop|Process viewer
+Tools|ncdu|Disk usage
+Tools|tree|Folder tree
+Tools|git|Version control
+Tools|rsync|Copy and sync files
+Tools|zip|Make zip files
+Tools|unzip|Unpack zip files
+Electronics & math|qalc|Powerful calculator
+Electronics & math|bc|Calculator language
+Electronics & math|ngspice|Circuit simulator
+Electronics & math|gnuplot-nox|Plot functions
+Electronics & math|maxima|Computer algebra
+Electronics & math|picocom|Serial terminal
+Electronics & math|minicom|Serial term. (menu)
+Electronics & math|sigrok-cli|Logic analyzer
+Internet|w3m|Web browser
+Internet|lynx|Web browser
+Internet|newsboat|RSS reader
+Internet|weechat|IRC chat
+Internet|irssi|IRC chat
+Internet|neomutt|E-mail
+Organizer|calcurse|Calendar and to-do
+Organizer|taskwarrior|To-do list
+Organizer|sc-im|Spreadsheet
+Media|cmus|Music player
+Media|mpg123|MP3 player
+Media|fbi|Image viewer
+Games|nethack-console|Dungeon adventure
+Games|frotz|Text adventures
+Games|bastet|Tetris
+Games|nudoku|Sudoku
+Games|ninvaders|Space Invaders
+Games|moon-buggy|Moon buggy jumper
+Games|greed|Number game
+Games|bsdgames|Classic games
+Programming|lua5.4|Lua language
+Programming|tcc|Tiny C compiler
+Programming|build-essential|GCC and make (big)
+Programming|python3-pip|Python packages
+Tools|tldr|Short command examples
+Code check|micro|Editor, shows errors
+Code check|shellcheck|Check Bash scripts
+Code check|lua-check|Check Lua code
+Code check|pyflakes3|Check Python code
+Code check|cppcheck|Check C and C++ code
+Code check|gdb|Debugger for C/C++
+Code check|valgrind|Find memory errors

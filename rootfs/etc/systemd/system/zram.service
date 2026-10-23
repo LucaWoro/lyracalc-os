@@ -1,0 +1,11 @@
+[Unit]
+Description=Compressed swap in RAM (zram)
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/zram-start.sh
+ExecStop=/sbin/swapoff /dev/zram0
+
+[Install]
+WantedBy=multi-user.target

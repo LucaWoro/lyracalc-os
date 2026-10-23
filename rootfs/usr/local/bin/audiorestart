@@ -1,0 +1,5 @@
+#!/bin/sh
+# Reload the sound driver
+rmmod picocalc_snd_pwm 2>/dev/null
+modprobe picocalc_snd_pwm
+if [ -d /sys/module/picocalc_snd_pwm ]; then echo "Sound driver reloaded."; else echo "Sound driver not loaded (AUDIO=off?)."; fi

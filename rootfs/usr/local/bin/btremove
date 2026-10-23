@@ -1,0 +1,10 @@
+#!/bin/bash
+# Remove (unpair) a Bluetooth device
+mapfile -t DEVS < <(bluetoothctl devices Paired | cut -d' ' -f2-)
+[ ${#DEVS[@]} -gt 0 ] || { echo "No paired devices."; exit 0; }
+for i in "${!DEVS[@]}"; do printf "%2d) %s\n" $((i + 1)) "${DEVS[$i]#* }"; done
+read -rp "Number to remove (Enter = cancel): " N
+[ -n "$N" ] || exit 0
+[[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -ge 1 ] && [ "$N" -le ${#DEVS[@]} ] || { echo "Invalid number."; exit 1; }
+MAC=${DEVS[$((N - 1))]%% *}
+bluetoothctl remove "$MAC" >/dev/null && echo "Removed: ${DEVS[$((N - 1))]#* }"

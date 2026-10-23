@@ -1,0 +1,86 @@
+#!/bin/bash
+# App installer: curated list by category, or any package
+LIST=/usr/local/lib/picocalc/apps.list
+TITLE="PicoCalc apps"
+[ "$(id -u)" = 0 ] || { echo "Please run as root."; exit 1; }
+command -v whiptail >/dev/null || { echo "whiptail missing: apt install whiptail"; exit 1; }
+
+size() { H=$(tput lines 2>/dev/null || echo 20); W=$(tput cols 2>/dev/null || echo 40); LH=$((H - 8)); }
+installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"; }
+pause() { echo ""; read -rp "Enter = back " _; }
+need_net() {
+  ip route 2>/dev/null | grep -q '^default' && return 0
+  whiptail --title "$TITLE" --msgbox "No internet connection. Turn WiFi on first (wifion) or plug in LAN." 10 "$W"
+  return 1
+}
+fresh_lists() {   # update the package lists if they are missing or older than 7 days
+  if [ -z "$(find /var/lib/apt/lists -maxdepth 1 -name '*Packages*' -mtime -7 2>/dev/null | head -1)" ]; then
+    clear; echo "Updating package lists..."; apt-get update
+  fi
+}
+run() { clear; "$@"; pause; }
+
+browse() {
+  local cat cats=() items=() p d sel inst rem
+  size
+  while read -r c; do cats+=("$c" ""); done < <(grep -v '^#' "$LIST" | cut -d'|' -f1 | awk '!s[$0]++')
+  cat=$(whiptail --title "$TITLE" --menu "Category" "$H" "$W" "$LH" "${cats[@]}" 3>&1 1>&2 2>&3) || return
+  while IFS='|' read -r c p d; do
+    [ "$c" = "$cat" ] || continue
+    if installed "$p"; then items+=("$p" "$d" ON); else items+=("$p" "$d" OFF); fi
+  done < <(grep -v '^#' "$LIST")
+  sel=$(whiptail --title "$cat" --separate-output --checklist "Space = select, Enter = OK" "$H" "$W" "$LH" "${items[@]}" 3>&1 1>&2 2>&3) || return
+  inst=""; rem=""
+  for ((i = 0; i < ${#items[@]}; i += 3)); do
+    p=${items[$i]}
+    if echo "$sel" | grep -qx "$p"; then installed "$p" || inst="$inst $p"
+    else installed "$p" && rem="$rem $p"; fi
+  done
+  [ -z "$inst$rem" ] && return
+  whiptail --title "$TITLE" --yesno "Install:${inst:- -}\n\nRemove:${rem:- -}\n\nGo ahead?" "$H" "$W" || return
+  clear
+  if [ -n "$inst" ]; then need_net && { fresh_lists; apt-get install -y $inst; }; fi
+  [ -n "$rem" ] && apt-get remove -y $rem
+  pause
+}
+
+any_install() {
+  size
+  local p; p=$(whiptail --title "$TITLE" --inputbox "Package name(s) to install:" 10 "$W" 3>&1 1>&2 2>&3) || return
+  [ -n "$p" ] || return
+  need_net || return; fresh_lists; run apt-get install $p
+}
+any_search() {
+  size
+  local t f; t=$(whiptail --title "$TITLE" --inputbox "Search for:" 10 "$W" 3>&1 1>&2 2>&3) || return
+  [ -n "$t" ] || return
+  fresh_lists
+  f=$(mktemp); apt-cache search "$t" | sort | cut -c1-200 > "$f"
+  [ -s "$f" ] || echo "Nothing found." > "$f"
+  whiptail --title "Search: $t" --scrolltext --textbox "$f" "$H" "$W"; rm -f "$f"
+}
+any_remove() {
+  size
+  local p; p=$(whiptail --title "$TITLE" --inputbox "Package name(s) to remove:" 10 "$W" 3>&1 1>&2 2>&3) || return
+  [ -n "$p" ] && run apt-get remove $p
+}
+
+while :; do
+  size
+  c=$(whiptail --title "$TITLE" --menu "Choose" "$H" "$W" "$LH" \
+      1 "App list by category" \
+      2 "Install any package" \
+      3 "Search packages" \
+      4 "Remove a package" \
+      5 "Update package lists" \
+      6 "Update all software" \
+      3>&1 1>&2 2>&3) || { clear; exit 0; }
+  case "$c" in
+    1) browse ;;
+    2) any_install ;;
+    3) any_search ;;
+    4) any_remove ;;
+    5) need_net && run apt-get update ;;
+    6) need_net && { fresh_lists; run apt-get upgrade; } ;;
+  esac
+done

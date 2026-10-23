@@ -1,0 +1,2 @@
+# DHCP on USB LAN adapters and USB tethering
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="r8152|r8153_ecm|asix|ax88179_178a|lan78xx|cdc_ether|cdc_eem|cdc_ncm|rndis_host|ipheth|smsc95xx|dm9601|sr9700", TAG+="systemd", ENV{SYSTEMD_WANTS}+="lan@$name.service"

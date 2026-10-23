@@ -1,0 +1,8 @@
+[Unit]
+Description=Wired USB network on %I (DHCP)
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+
+[Service]
+ExecStart=/sbin/dhclient -d -pf /run/dhclient-%I.pid -lf /var/lib/dhcp/dhclient-%I.leases %I
+ExecStopPost=-/sbin/dhclient -r -pf /run/dhclient-%I.pid -lf /var/lib/dhcp/dhclient-%I.leases %I

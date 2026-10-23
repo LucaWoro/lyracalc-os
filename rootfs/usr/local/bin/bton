@@ -1,0 +1,9 @@
+#!/bin/sh
+# Switch Bluetooth on
+if [ ! -d /sys/class/bluetooth/hci0 ]; then
+  echo "No Bluetooth adapter found. Is the dongle plugged in?"; exit 1
+fi
+rfkill unblock bluetooth 2>/dev/null
+systemctl start bluetooth
+sleep 1
+bluetoothctl power on >/dev/null && echo "Bluetooth on."

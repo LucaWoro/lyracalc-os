@@ -1,0 +1,49 @@
+diff --git a/src/studio/config.c b/src/studio/config.c
+index c827005..456bc66 100644
+--- a/src/studio/config.c
++++ b/src/studio/config.c
+@@ -30,7 +30,7 @@
+ #define DEFAULT_VSYNC 1
+ #endif
+ 
+-#if defined(__TIC_ANDROID__)            
++#if defined(__TIC_ANDROID__) || defined(TIC80_NO_INTEGER_SCALE)
+ #define INTEGER_SCALE_DEFAULT false
+ #else
+ #define INTEGER_SCALE_DEFAULT true
+diff --git a/src/system/sdl/main.c b/src/system/sdl/main.c
+index 45c2c6f..74f4fbd 100644
+--- a/src/system/sdl/main.c
++++ b/src/system/sdl/main.c
+@@ -1879,8 +1879,20 @@ static s32 start(s32 argc, char **argv, const char* folder)
+             initSound();
+ 
+             {
+-                const s32 Width = TIC80_FULLWIDTH * studio_config(platform.studio)->uiScale;
+-                const s32 Height = TIC80_FULLHEIGHT * studio_config(platform.studio)->uiScale;
++                s32 Width = TIC80_FULLWIDTH * studio_config(platform.studio)->uiScale;
++                s32 Height = TIC80_FULLHEIGHT * studio_config(platform.studio)->uiScale;
++                s32 WinX = SDL_WINDOWPOS_CENTERED, WinY = SDL_WINDOWPOS_CENTERED;
++
++                /* TIC80_WINDOW=WxH: window of exactly this size at 0,0 (small screens without a
++                   window manager, e.g. PicoCalc 320x320); the picture is scaled and centred in it */
++                {
++                    const char* ws = getenv("TIC80_WINDOW");
++                    s32 w = 0, h = 0;
++                    if(ws && sscanf(ws, "%dx%d", &w, &h) == 2 && w > 0 && h > 0)
++                    {
++                        Width = w; Height = h; WinX = 0; WinY = 0;
++                    }
++                }
+ 
+                 s32 flags = SDL_WINDOW_SHOWN 
+ #if !defined(__EMSCRIPTEN__) && !defined(__MACOSX__)
+@@ -1894,7 +1906,7 @@ static s32 start(s32 argc, char **argv, const char* folder)
+                     flags |= SDL_WINDOW_OPENGL;
+ #endif            
+ 
+-                platform.window = SDL_CreateWindow(TIC_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Width, Height, flags);
++                platform.window = SDL_CreateWindow(TIC_TITLE, WinX, WinY, Width, Height, flags);
+ 
+                 setWindowIcon();
+                 initGPU();

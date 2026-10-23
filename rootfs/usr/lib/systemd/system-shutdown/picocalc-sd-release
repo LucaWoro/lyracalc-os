@@ -1,0 +1,4 @@
+#!/bin/sh
+# a card left in SPI mode hangs the reboot
+rmmod mmc_spi 2>/dev/null
+exit 0

@@ -1,0 +1,8 @@
+# remember the last WiFi address for the login screen
+case "$interface" in
+  wl*)
+    case "$reason" in
+      BOUND|RENEW|REBIND|REBOOT)
+        [ -n "$new_ip_address" ] && { mkdir -p /var/lib/lyracalc; echo "$new_ip_address" > /var/lib/lyracalc/wifi-ip; } ;;
+    esac ;;
+esac

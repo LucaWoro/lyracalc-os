@@ -1,0 +1,260 @@
+#!/bin/bash
+# Setup wizard
+#   picocalc-setup            all steps
+#   picocalc-setup STEP       one step: password time wifi audio bt pico8
+#   picocalc-setup --on       show the wizard at the next boot
+#   picocalc-setup --off      never show it at boot
+# Answers: y = yes, n = no, s or Enter = skip (keep as it is)
+PCONF=/etc/picocalc.conf
+WCONF=/etc/wpa_supplicant.conf
+STEPS="password time wifi audio bt pico8"
+BOOT=0
+REBOOT=0
+if [ -t 1 ]; then
+  R=$'\e[0m'; CY=$'\e[1;36m'; YE=$'\e[1;33m'; GR=$'\e[1;32m'; RD=$'\e[1;31m'; GY=$'\e[1;30m'
+else
+  R=; CY=; YE=; GR=; RD=; GY=
+fi
+ok()   { echo "${GR}$*${R}"; }
+bad()  { echo "${RD}$*${R}"; }
+
+conf_get() { sed -n "s/^$1=//p" "$PCONF" 2>/dev/null | tail -1; }
+conf_set() {
+  touch "$PCONF"
+  if grep -q "^$1=" "$PCONF"; then sed -i "s|^$1=.*|$1=$2|" "$PCONF"; else echo "$1=$2" >> "$PCONF"; fi
+}
+ask() {   # ask "question"  -> 0 = yes, 1 = no, 2 = skip
+  local a
+  while :; do
+    read -rp "$1 ${YE}[y/n/s]${R} " a || return 2
+    case "$a" in [yY]*) return 0 ;; [nN]*) return 1 ;; ""|[sS]*) return 2 ;; esac
+  done
+}
+title() {   # title "n/6 Name"
+  [ "$BOOT" = 1 ] && clear
+  echo "${CY}== PicoCalc setup: $1 ==${R}"
+  echo ""
+}
+pause() { read -rp "${GY}Enter = continue${R} " _; }
+skipped() { echo "${GY}Skipped.${R}"; [ "$BOOT" = 1 ] && sleep 1; }
+
+step_password() {
+  title "1/6 Password"
+  echo "Login: root   Password: root"
+  echo ""
+  ask "Change the root password?"
+  if [ $? = 0 ]; then
+    for i in 1 2 3; do passwd root && break; done
+  else
+    skipped
+  fi
+}
+
+step_time() {
+  title "2/6 Time zone"
+  echo "Now: $(timedatectl show -p Timezone --value 2>/dev/null)"
+  echo ""
+  local Z=(UTC Europe/Berlin Europe/London Europe/Paris Europe/Madrid America/New_York America/Chicago America/Los_Angeles Asia/Tokyo Australia/Sydney)
+  local N=("" "DE AT CH" "UK IE" "FR BE NL" "ES" "US East" "US Central" "US West" "JP" "AU East")
+  local i a tz=""
+  for i in "${!Z[@]}"; do printf '%s%3d)%s %-20s %s\n' "$YE" $((i + 1)) "$R" "${Z[$i]}" "${N[$i]}"; done
+  echo "  ${YE}o)${R} other   ${YE}s)${R} skip"
+  read -rp "Choice: " a
+  case "$a" in
+    ""|[sS]*) skipped ;;
+    [oO]*) read -rp "Time zone (e.g. Europe/Rome): " tz ;;
+    *) if [[ "$a" =~ ^[0-9]+$ ]] && [ "$a" -ge 1 ] && [ "$a" -le ${#Z[@]} ]; then tz=${Z[$((a - 1))]}; else bad "Invalid choice, skipped."; fi ;;
+  esac
+  if [ -n "$tz" ]; then
+    if timedatectl list-timezones 2>/dev/null | grep -qx "$tz"; then
+      timedatectl set-timezone "$tz" && conf_set TIMEZONE "$tz" && ok "Time zone: $tz"
+    else
+      bad "Unknown time zone, kept the old one."
+    fi
+    [ "$BOOT" = 1 ] && sleep 1
+  fi
+  step_country
+}
+
+step_country() {
+  title "2/6 WiFi country"
+  echo "The country sets the allowed WiFi"
+  echo "channels. Now: $(sed -n 's/^country=//p' "$WCONF" 2>/dev/null | head -1 | grep . || echo not set)"
+  echo ""
+  local C=(DE AT CH GB FR NL IT ES US JP)
+  local N=(Germany Austria Switzerland "United Kingdom" France Netherlands Italy Spain "United States" Japan)
+  local i a cc=""
+  for i in "${!C[@]}"; do printf '%s%3d)%s %s  %s\n' "$YE" $((i + 1)) "$R" "${C[$i]}" "${N[$i]}"; done
+  echo "  ${YE}o)${R} other   ${YE}s)${R} skip"
+  read -rp "Choice: " a
+  case "$a" in
+    ""|[sS]*) skipped ;;
+    [oO]*) read -rp "Two-letter code (e.g. PL): " cc ;;
+    *) if [[ "$a" =~ ^[0-9]+$ ]] && [ "$a" -ge 1 ] && [ "$a" -le ${#C[@]} ]; then cc=${C[$((a - 1))]}; else bad "Invalid choice, skipped."; fi ;;
+  esac
+  cc=$(echo "$cc" | tr a-z A-Z)
+  if [ -n "$cc" ]; then
+    if [[ "$cc" =~ ^[A-Z]{2}$ ]]; then
+      touch "$WCONF"
+      if grep -q '^country=' "$WCONF"; then sed -i "s/^country=.*/country=$cc/" "$WCONF"; else sed -i "1i country=$cc" "$WCONF"; fi; conf_set WIFI_COUNTRY "$cc"
+      ok "Country: $cc"
+    else
+      bad "Invalid code, kept the old one."
+    fi
+    [ "$BOOT" = 1 ] && sleep 1
+  fi
+}
+
+step_wifi() {
+  title "3/6 WiFi"
+  if ! compgen -G '/sys/class/net/wl*' >/dev/null; then
+    bad "No WiFi stick found."
+    echo "Plug one in later and run:"
+    echo "  picocalc-setup wifi"
+    [ "$BOOT" = 1 ] && pause
+    return
+  fi
+  ask "Set up WiFi now?"
+  if [ $? = 0 ]; then
+    wifion >/dev/null 2>&1; sleep 2
+    wifisetup
+    echo ""
+  fi
+  echo "Autostart now: $(conf_get WIFI_AUTOSTART)"
+  ask "Start WiFi automatically?"
+  case $? in
+    0) conf_set WIFI_AUTOSTART on;  ok "WiFi autostart: on" ;;
+    1) conf_set WIFI_AUTOSTART off; ok "WiFi autostart: off" ;;
+    *) skipped ;;
+  esac
+}
+
+step_audio() {
+  title "4/6 Sound"
+  echo "Sound needs a ${RD}HARDWARE MOD${R}:"
+  echo "the PicoCalc speaker amplifier"
+  echo "must be wired to the Lyra"
+  echo "(pin RMIO12, see the user guide)."
+  echo "Without this mod there is no"
+  echo "sound. No mod? Choose ${YE}n${R}."
+  echo ""
+  local old; old=$(conf_get AUDIO); old=${old:-on}
+  echo "Sound now: $old"
+  ask "Enable sound?"
+  case $? in
+    0) conf_set AUDIO on ;;
+    1) conf_set AUDIO off ;;
+    *) skipped; return ;;
+  esac
+  ok "Sound: $(conf_get AUDIO)"
+  [ "$(conf_get AUDIO)" != "$old" ] && REBOOT=1 && echo "${YE}Applies after a restart.${R}"
+  [ "$BOOT" = 1 ] && sleep 1
+}
+
+step_bt() {
+  title "5/6 Bluetooth"
+  if ! ls /sys/class/bluetooth/hci* >/dev/null 2>&1; then
+    bad "No Bluetooth stick found."
+    echo "Later: bton, then btpair"
+    [ "$BOOT" = 1 ] && pause
+    return
+  fi
+  ask "Pair a Bluetooth device now?"
+  if [ $? = 0 ]; then bton >/dev/null 2>&1; btpair; else skipped; fi
+}
+
+step_pico8() {
+  title "6/6 PICO-8"
+  if [ -x /root/pico-8/pico8_dyn ]; then
+    ok "PICO-8 is installed. Start: pico8"
+    [ "$BOOT" = 1 ] && sleep 1
+    return
+  fi
+  local zip
+  zip=$(ls -t /mnt/sd/pico-8*raspi*.zip /mnt/sd/pico8/pico-8*raspi*.zip /root/pico-8*raspi*.zip 2>/dev/null | head -1)
+  if [ -n "$zip" ]; then
+    ok "Found: $(basename "$zip")"
+    ask "Install PICO-8 now?"
+    if [ $? = 0 ]; then pico8install "$zip"; else skipped; fi
+  else
+    echo "PICO-8 is not included. To add it:"
+    echo "1. Buy it at lexaloffle.com"
+    echo "2. Download the Raspberry Pi zip"
+    echo "3. Copy it to the SD card"
+    echo "4. Run: ${YE}pico8install${R}"
+  fi
+  [ "$BOOT" = 1 ] && pause
+}
+
+summary() {
+  title "Done"
+  echo "Time zone: ${GR}$(timedatectl show -p Timezone --value 2>/dev/null)${R}"
+  echo "WiFi country: ${GR}$(sed -n 's/^country=//p' "$WCONF" 2>/dev/null | head -1 | grep . || echo not set)${R}"
+  echo "WiFi autostart: ${GR}$(conf_get WIFI_AUTOSTART)${R}"
+  echo "Sound: ${GR}$(conf_get AUDIO)${R}"
+  echo ""
+  echo "Run again any time:"
+  echo "  ${YE}picocalc-setup${R}"
+  echo "All settings in one file:"
+  echo "  ${YE}picocalc-config${R}"
+  echo ""
+  restart_if_needed
+  [ "$BOOT" = 1 ] && pause
+}
+
+restart_if_needed() {
+  [ "$REBOOT" = 1 ] || return 0
+  ask "Restart now?"
+  [ $? = 0 ] && reboot && exit 0
+  echo "Restart later for the sound change."
+}
+
+case "$1" in
+  --on)  conf_set SETUP_WIZARD on;  echo "The setup wizard will show at the next boot."; exit 0 ;;
+  --off) conf_set SETUP_WIZARD off; echo "The setup wizard will not show at boot."; exit 0 ;;
+  -h|--help) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  --boot) BOOT=1 ;;
+  "") ;;
+  *)
+    case " $STEPS " in
+      *" $1 "*) "step_$1"; restart_if_needed; exit 0 ;;
+      *) echo "Unknown step: $1 (steps: $STEPS)"; exit 1 ;;
+    esac ;;
+esac
+
+[ "$(id -u)" = 0 ] || { echo "Please run as root."; exit 1; }
+trap 'echo; echo "Setup stopped. Run again: picocalc-setup"; conf_set SETUP_WIZARD off; exit 0' INT
+[ "$BOOT" = 1 ] && clear
+echo "${CY}Welcome to LyraCalc OS!${R}"
+echo ""
+if [ "$BOOT" = 1 ]; then
+  echo "Use the setup guide (6 short"
+  echo "steps), or go straight to the"
+  echo "terminal and set things up there?"
+  echo ""
+  echo "  ${YE}y${R} = setup guide"
+  echo "  ${YE}n${R} = terminal"
+  echo ""
+  ask "Start the setup guide?"
+  if [ $? != 0 ]; then
+    conf_set SETUP_WIZARD off
+    echo ""
+    echo "Setup guide any time:"
+    echo "  ${YE}picocalc-setup${R}"
+    echo "All settings in one file:"
+    echo "  ${YE}picocalc-config${R}"
+    echo "Login: ${GR}root${R}  Password: ${GR}root${R}"
+    echo ""
+    pause
+    exit 0
+  fi
+  echo ""
+fi
+echo "Answers:"
+echo "  ${YE}y${R} = yes   ${YE}n${R} = no"
+echo "  ${YE}s${R} or ${YE}Enter${R} = skip"
+echo ""
+pause
+for s in $STEPS; do "step_$s"; done
+conf_set SETUP_WIZARD off
+summary

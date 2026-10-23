@@ -1,0 +1,2 @@
+# console keymap for USB keyboards (USB_KEYBOARD_LAYOUT)
+ACTION=="add|remove", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_BUS}=="usb", ENV{ID_INPUT_KEYBOARD}=="1", RUN+="/usr/local/sbin/kbd-layout.sh"

@@ -1,0 +1,14 @@
+#!/bin/bash
+# Start PICO-8 on the PicoCalc screen
+M=/sys/module/picocalc_kbd/parameters/p_mouse
+[ -x /root/pico-8/pico8_dyn ] || { echo "PICO-8 is not installed. Copy your pico-8_..._raspi.zip to the SD card and run: pico8install"; exit 1; }
+cd /root/pico-8 || exit 1
+export SDL_AUDIODRIVER=alsa
+[ -n "$AUDIODEV" ] || [ -d /sys/module/picocalc_snd_pwm ] || export SDL_AUDIODRIVER=dummy
+export SDL_VIDEODRIVER=x11
+export SDL_RENDER_DRIVER=software
+G=${M%/*}/p_game
+echo 1 > $M 2>/dev/null
+echo 0 > $G 2>/dev/null
+trap 'echo 0 > $G 2>/dev/null; echo 0 > $M 2>/dev/null' EXIT
+xinit /root/pico-8/pico8_dyn -windowed 1 -width 320 -height 320 -frameless 1 -pixel_perfect 0 -draw_rect 0,0,320,320 "$@" -- :0 vt2 -nocursor -quiet > /tmp/pico8.log 2>&1

@@ -1,0 +1,2 @@
+# auto-mount the PicoCalc SD slot (mmc_spi)
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="mmcblk1|mmcblk1p[0-9]*", ENV{ID_FS_USAGE}=="filesystem", RUN+="/usr/local/sbin/picocalc-sd-mount %k"

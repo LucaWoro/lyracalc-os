@@ -1,0 +1,10 @@
+[Unit]
+Description=Apply /etc/picocalc.conf
+After=picocalc-overlay.service bluetooth.service ssh.service picocalc-font.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/picocalc-apply --boot
+
+[Install]
+WantedBy=multi-user.target

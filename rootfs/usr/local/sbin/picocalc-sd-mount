@@ -1,0 +1,16 @@
+#!/bin/sh
+# udev: mount a filesystem from the PicoCalc SD slot
+NAME="$1"
+DEV="/dev/$NAME"
+case "$NAME" in
+  mmcblk1|mmcblk1p1) DIR=/mnt/sd ;;
+  *)                 DIR="/mnt/sd-${NAME#mmcblk1}" ;;
+esac
+TYPE=$(blkid -o value -s TYPE "$DEV")
+OPTS=noatime
+case "$TYPE" in
+  vfat) OPTS=noatime,flush,utf8 ;;
+  ntfs) TYPE=ntfs3 ;;
+  "")   exit 0 ;;
+esac
+exec systemd-mount --no-block --collect -t "$TYPE" -o "$OPTS" "$DEV" "$DIR"

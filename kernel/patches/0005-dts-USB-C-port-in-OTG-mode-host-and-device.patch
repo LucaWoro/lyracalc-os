@@ -1,0 +1,151 @@
+From aec5a63a283359c9a262eec9997761ce6efd3196 Mon Sep 17 00:00:00 2001
+From: LyraCalc OS <lyracalc-os@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 12:00:00 +0200
+Subject: [PATCH 5/6] dts: USB-C port in OTG mode (host and device)
+
+---
+ kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra-ultra.dtsi     | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi           | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-pi-w-sd.dts   | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra-w.dts   | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra.dts     | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-zero-w-sd.dts | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus-sd.dts   | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus.dts      | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-sd.dts        | 2 +-
+ kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra.dts           | 2 +-
+ 10 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra-ultra.dtsi b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra-ultra.dtsi
+index 3709c085..d8c8c2f9 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra-ultra.dtsi
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra-ultra.dtsi
+@@ -1172,7 +1172,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	/* vbus-supply = <&vcc5v0_otg0>;
+ 	rockchip,gpio-vbus-det; */
+ 	status = "okay";
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
+index 062a1ec2..292be408 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
+@@ -1181,7 +1181,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	/* vbus-supply = <&vcc5v0_otg0>;
+ 	rockchip,gpio-vbus-det; */
+ 	status = "okay";
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-pi-w-sd.dts b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-pi-w-sd.dts
+index 545c3131..0376bf88 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-pi-w-sd.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-pi-w-sd.dts
+@@ -168,7 +168,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra-w.dts b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra-w.dts
+index 2eeb2833..6f2000dd 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra-w.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra-w.dts
+@@ -141,7 +141,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra.dts b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra.dts
+index 1d4c352d..4530320b 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-ultra.dts
+@@ -106,7 +106,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-zero-w-sd.dts b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-zero-w-sd.dts
+index 40de0228..3a0cea7e 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-zero-w-sd.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506b-luckfox-lyra-zero-w-sd.dts
+@@ -54,7 +54,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus-sd.dts b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus-sd.dts
+index 63d902fd..a71eaff0 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus-sd.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus-sd.dts
+@@ -62,7 +62,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus.dts b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus.dts
+index 7b1ba6b6..aed4882f 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-plus.dts
+@@ -62,7 +62,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-sd.dts b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-sd.dts
+index b32c9633..c3e1638f 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-sd.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-sd.dts
+@@ -54,7 +54,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra.dts b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra.dts
+index bf3b41b1..ad66e957 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra.dts
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra.dts
+@@ -48,7 +48,7 @@
+ 
+ /**********usb**********/
+ &usb20_otg0 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+-- 
+2.43.0
+

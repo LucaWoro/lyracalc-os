@@ -1,0 +1,14 @@
+#!/bin/bash
+# Edit /etc/picocalc.conf; changes are applied when you save and quit.
+# nano: Ctrl+O then Enter = save, Ctrl+X = quit
+F=/etc/picocalc.conf
+B=$(md5sum < "$F")
+for e in "$EDITOR" nano micro nvim vim vi; do
+  [ -n "$e" ] && command -v "$e" >/dev/null && { "$e" "$F"; break; }
+done
+if [ "$(md5sum < "$F")" != "$B" ]; then
+  echo "Applying the new settings..."
+  /usr/local/sbin/picocalc-apply
+else
+  echo "Nothing changed."
+fi

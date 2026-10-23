@@ -1,0 +1,4 @@
+Cheat sheets: "Learn X in Y minutes", https://learnxinyminutes.com
+Source: https://github.com/adambard/learnxinyminutes-docs (commit 78548dd), files unchanged
+(c++.md saved as cpp.md). Authors are listed at the top of each file.
+Licence: Creative Commons Attribution-ShareAlike 3.0 (LICENSE-learnxinyminutes.txt)

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Quick connect: search, pick a number, enter the password
+. /usr/local/lib/picocalc/wifi-common.sh
+need_wifi
+echo "Searching for WiFi networks..."
+mapfile -t NETS < <(wifi_scan)
+[ ${#NETS[@]} -gt 0 ] || { echo "No networks found. Try again."; exit 1; }
+printf '%s\n' "${NETS[@]}" | print_table
+read -rp "Number (Enter = cancel): " N
+[ -n "$N" ] || exit 0
+[[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -ge 1 ] && [ "$N" -le ${#NETS[@]} ] || { echo "Invalid number."; exit 1; }
+IFS=$'\t' read -r _ SEC SSID <<< "${NETS[$((N - 1))]}"
+ID=$(saved_id "$SSID")
+if [ -n "$ID" ]; then
+  try_connect "$ID" 0 "$SSID" && exit 0
+  read -rp "Enter a new password for $SSID? [y/N] " A
+  [ "$A" = y ] || [ "$A" = Y ] || exit 1
+  wcli remove_network "$ID" >/dev/null
+fi
+add_and_connect "$SSID" "$SEC" 0

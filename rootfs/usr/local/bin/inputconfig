@@ -1,0 +1,46 @@
+#!/bin/bash
+# Mouse and keyboard settings
+#   inputconfig                 menu
+#   inputconfig mouse N         mouse speed 1..10 (5 = normal)
+#   inputconfig delay MS        key repeat delay 250..1000 ms
+#   inputconfig rate N          key repeats per second 2..30
+#   inputconfig reset           back to the defaults (2, 400, 15)
+PCONF=/etc/picocalc.conf
+if [ -t 1 ]; then R=$'\e[0m'; CY=$'\e[1;36m'; YE=$'\e[1;33m'; GR=$'\e[1;32m'; RD=$'\e[1;31m'; else R=; CY=; YE=; GR=; RD=; fi
+set_key() {
+  if grep -q "^$1=" "$PCONF"; then sed -i "s/^$1=.*/$1=$2/" "$PCONF"; else echo "$1=$2" >> "$PCONF"; fi
+}
+check() {   # check value min max
+  [[ "$1" =~ ^[0-9]+$ ]] && [ "$1" -ge "$2" ] && [ "$1" -le "$3" ] && return 0
+  echo "${RD}Please give a number from $2 to $3.${R}"; return 1
+}
+apply() { /usr/local/sbin/picocalc-input-apply; echo "${GR}Saved.${R} Console: now. PICO-8 / TIC-80: next start."; }
+show() {
+  . /usr/local/lib/picocalc/input.sh
+  echo "${CY}== Mouse and keyboard ==${R}"
+  echo ""
+  echo "${YE}1)${R} Mouse speed:   ${GR}$MOUSE_SPEED${R} (1-10)"
+  echo "${YE}2)${R} Repeat delay:  ${GR}$KEY_REPEAT_DELAY ms${R}"
+  echo "${YE}3)${R} Repeat speed:  ${GR}$KEY_REPEAT_RATE /s${R}"
+  echo "${YE}4)${R} Defaults (2, 400 ms, 15 /s)"
+  echo "${YE}q)${R} Quit"
+}
+case "$1" in
+  mouse) check "$2" 1 10 && set_key MOUSE_SPEED "$2" && apply; exit ;;
+  delay) check "$2" 250 1000 && set_key KEY_REPEAT_DELAY "$2" && apply; exit ;;
+  rate)  check "$2" 2 30 && set_key KEY_REPEAT_RATE "$2" && apply; exit ;;
+  reset) set_key MOUSE_SPEED 2; set_key KEY_REPEAT_DELAY 400; set_key KEY_REPEAT_RATE 15; apply; exit ;;
+  -h|--help) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+while :; do
+  show
+  read -rp "Choice: " c
+  case "$c" in
+    1) read -rp "Mouse speed 1 (slow) - 10 (fast): " v; check "$v" 1 10 && set_key MOUSE_SPEED "$v" && apply ;;
+    2) read -rp "Repeat delay in ms (250-1000): " v; check "$v" 250 1000 && set_key KEY_REPEAT_DELAY "$v" && apply ;;
+    3) read -rp "Repeats per second (2-30): " v; check "$v" 2 30 && set_key KEY_REPEAT_RATE "$v" && apply ;;
+    4) set_key MOUSE_SPEED 2; set_key KEY_REPEAT_DELAY 400; set_key KEY_REPEAT_RATE 15; apply ;;
+    q|Q|"") exit 0 ;;
+  esac
+  echo ""
+done

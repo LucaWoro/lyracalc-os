@@ -1,0 +1,11 @@
+#!/bin/bash
+# Start PICO-8 in SPLORE, switching WiFi on if needed
+if ! ip -4 addr show 2>/dev/null | grep -q "inet .* wl"; then
+  wifion
+  echo "Waiting for WiFi..."
+  for _ in $(seq 15); do
+    ip -4 addr show 2>/dev/null | grep -q "inet .* wl" && break
+    sleep 1
+  done
+fi
+exec pico8 -splore "$@"

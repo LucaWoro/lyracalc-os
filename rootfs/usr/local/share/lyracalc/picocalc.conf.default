@@ -1,0 +1,75 @@
+# ======================================================================
+#  LyraCalc OS settings
+#  Edit with: picocalc-config   (changes are applied when you save + quit)
+#  or apply by hand with: picocalc-apply
+#  Passwords are not stored here: use passwd, wifisetup, btpair
+# ======================================================================
+
+# ----- System ---------------------------------------------------------
+# Device name (login prompt "lyra login:", network name)
+HOSTNAME=lyra
+# Time zone, e.g. Europe/Berlin, UTC, America/New_York
+TIMEZONE=UTC
+# on = show the setup wizard at the next boot (picocalc-setup --on / --off)
+SETUP_WIZARD=on
+
+# ----- WiFi -----------------------------------------------------------
+# on = start WiFi automatically when a stick is plugged in / at boot
+WIFI_AUTOSTART=off
+# Two-letter country code for the allowed channels, e.g. DE, AT, CH, US
+WIFI_COUNTRY=
+
+# ----- SSH (remote login) ---------------------------------------------
+# on = SSH server running, off = no remote login
+SSH=on
+# on = login with password allowed, off = only with SSH keys
+SSH_PASSWORD=on
+
+# ----- Bluetooth ------------------------------------------------------
+# on = switch Bluetooth on at boot (if a stick is plugged in)
+BT_AUTOSTART=off
+
+# ----- Sound ----------------------------------------------------------
+# on = sound driver loaded (needs the audio hardware mod), off = no sound at all (reboot)
+AUDIO=on
+# on = muted (audioon / audiooff), volume is set with the wheel
+AUDIO_MUTE=off
+# ms of silence before the speaker output goes to standby (0 = never)
+AUDIO_STANDBY_MS=2000
+
+# ----- Screen ---------------------------------------------------------
+# Font: default vga8 terminus12 fixed13 terminus14 terminus16
+#       terminus16bold terminus20 terminus24 terminus32   (try them with: font)
+CONSOLE_FONT=default
+# on = show the status bar at boot (Alt+O switches it any time)
+OVERLAY=off
+
+# ----- Battery --------------------------------------------------------
+# on = battery warnings in the status bar, off = no warnings
+BATTERY_ALERTS=on
+# Orange warning from this level on (percent)
+BATTERY_WARN=15
+# The orange warning blinks for this many seconds ...
+BATTERY_WARN_SECONDS=8
+# ... and comes back after this many seconds
+BATTERY_WARN_REPEAT=120
+# Red warning, blinking all the time, from this level on (percent)
+BATTERY_CRITICAL=5
+# on = shut down automatically when the battery is empty, off = never
+BATTERY_AUTO_SHUTDOWN=on
+# Shut down at this level (percent)
+BATTERY_SHUTDOWN=3
+# Countdown before the shutdown in seconds (plugging in the charger cancels it)
+BATTERY_SHUTDOWN_DELAY=60
+
+# ----- Keyboard and mouse (inputconfig) -------------------------------
+# Keyboard mouse speed in PICO-8 / TIC-80: 1 (slow) to 10, 5 = normal
+MOUSE_SPEED=2
+# Wait before a held key repeats, in ms (250-1000)
+KEY_REPEAT_DELAY=400
+# Repeats per second while a key is held (2-30)
+KEY_REPEAT_RATE=15
+# Layout for USB keyboards, e.g. us, de, fr, gb (the PicoCalc keyboard stays US)
+USB_KEYBOARD_LAYOUT=us
+# Layout variant, e.g. nodeadkeys (empty = default)
+USB_KEYBOARD_VARIANT=

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Show paired devices
+n=0
+bluetoothctl devices Paired | while read -r _ mac name; do
+  n=$((n + 1))
+  if bluetoothctl info "$mac" | grep -q "Connected: yes"; then s="connected"; else s="not connected"; fi
+  printf "%2d) %-24s %s  (%s)\n" "$n" "$name" "$mac" "$s"
+done
+[ -n "$(bluetoothctl devices Paired)" ] || echo "No paired devices."

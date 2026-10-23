@@ -1,0 +1,48 @@
+# Ubuntu packages used by LyraCalc OS (installed by install.sh)
+
+# system
+alsa-utils
+bluez
+console-setup
+gpm
+isc-dhcp-client
+iw
+kbd
+keyboard-configuration
+rfkill
+usbutils
+wpasupplicant
+
+# PICO-8 / TIC-80
+python3-xlib
+socat
+x11vnc
+xinit
+xserver-xorg-core
+xserver-xorg-input-libinput
+xserver-xorg-video-fbdev
+
+# tools
+dialog
+htop
+mc
+micro
+neovim
+tldr
+tmux
+unzip
+whiptail
+
+# code checking
+cppcheck
+lua-check
+pyflakes3
+shellcheck
+
+# electronics
+esptool
+evtest
+i2c-tools
+python3-pip
+python3-serial
+stm32flash

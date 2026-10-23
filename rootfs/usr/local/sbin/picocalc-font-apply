@@ -1,0 +1,6 @@
+#!/bin/bash
+# Load CONSOLE_FONT from /etc/picocalc.conf
+. /usr/local/lib/picocalc/fonts.sh
+F=$(font_get)
+[ -z "$F" ] || [ "$F" = default ] && exit 0
+font_apply "$F" || echo "picocalc-font: unknown font '$F'"

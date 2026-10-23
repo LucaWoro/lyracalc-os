@@ -1,0 +1,11 @@
+[Unit]
+Description=PicoCalc console font (CONSOLE_FONT in /etc/picocalc.conf)
+After=systemd-vconsole-setup.service console-setup.service
+Before=picocalc-setup-wizard.service getty@tty1.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/picocalc-font-apply
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,31 @@
+diff --git a/src/studio/screens/start.c b/src/studio/screens/start.c
+index f207adf..792a02c 100644
+--- a/src/studio/screens/start.c
++++ b/src/studio/screens/start.c
+@@ -200,10 +200,15 @@ void initStart(Start* start, Studio* studio, const char* cart)
+     
+             while(true)
+             {
+-                const EmbedHeader* header = (const EmbedHeader*)_memmem(ptr, size, CART_SIG, STRLEN(CART_SIG));
++                const u8* found = (const u8*)_memmem(ptr, size, CART_SIG, STRLEN(CART_SIG));
+     
+-                if(header)
++                if(found)
+                 {
++                    /* copy: the signature can sit at any byte offset (unaligned read crashes on ARM) */
++                    EmbedHeader hdr;
++                    memcpy(&hdr, found, sizeof hdr);
++                    const EmbedHeader* header = &hdr;
++
+                     if(appSize == header->appSize + sizeof(EmbedHeader) + header->cartSize)
+                     {
+                         u8* data = calloc(1, sizeof(tic_cartridge));
+@@ -226,7 +231,7 @@ void initStart(Start* start, Studio* studio, const char* cart)
+                     }
+                     else
+                     {
+-                        ptr = (const u8*)header + STRLEN(CART_SIG);
++                        ptr = found + STRLEN(CART_SIG);
+                         size = appSize - (s32)(ptr - app);
+                     }
+                 }

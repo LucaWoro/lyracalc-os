@@ -1,0 +1,10 @@
+[Unit]
+Description=WiFi on %I
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/wifi.sh up %I
+ExecStop=/usr/local/sbin/wifi.sh down %I

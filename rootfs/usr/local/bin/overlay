@@ -1,0 +1,3 @@
+#!/bin/sh
+# Show or hide the status bar (same as Alt+O)
+pkill -USR1 -f picocalc-overlay.py

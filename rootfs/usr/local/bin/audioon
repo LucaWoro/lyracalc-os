@@ -1,0 +1,10 @@
+#!/bin/sh
+# Switch sound on (saved as AUDIO_MUTE=off in /etc/picocalc.conf)
+. /usr/local/lib/picocalc/conf.sh
+if [ "$(pc_get AUDIO)" = off ]; then
+  echo "Sound is disabled (AUDIO=off). Set AUDIO=on with picocalc-config and reboot."; exit 1
+fi
+[ -d /sys/module/picocalc_snd_pwm ] || modprobe picocalc_snd_pwm 2>/dev/null
+pc_set AUDIO_MUTE off
+/usr/local/sbin/picocalc-apply audio >/dev/null
+echo "Sound on. Set the volume with the wheel."

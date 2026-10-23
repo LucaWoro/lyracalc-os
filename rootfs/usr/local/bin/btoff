@@ -1,0 +1,3 @@
+#!/bin/sh
+# Switch Bluetooth off (until the next reboot or bton)
+bluetoothctl power off >/dev/null 2>&1 && echo "Bluetooth off." || echo "Bluetooth is not running."

@@ -1,0 +1,86 @@
+#!/bin/bash
+# Battery warnings and automatic shutdown (section Battery in /etc/picocalc.conf).
+# Also keeps the last WiFi address for the login screen in /var/lib/lyracalc/wifi-ip.
+. /usr/local/lib/picocalc/conf.sh
+BAT=/sys/firmware/picocalc/battery_percent
+A=/run/lyracalc/alert
+WCACHE=/var/lib/lyracalc/wifi-ip
+mkdir -p /run/lyracalc /var/lib/lyracalc
+num() { local v; v=$(pc_get "$1"); [[ "$v" =~ ^[0-9]+$ ]] && echo "$v" || echo "$2"; }
+onoff() { [ "$(pc_get "$1")" = off ] && echo off || echo on; }
+SHOWN=""
+alert() { [ "$SHOWN" = "$1" ] && return; SHOWN=$1; echo "$1" > "$A.new"; mv -f "$A.new" "$A"; pkill -USR2 -f picocalc-overlay.py 2>/dev/null; }
+noalert() { [ -n "$SHOWN" ] || return; SHOWN=""; rm -f "$A"; pkill -USR2 -f picocalc-overlay.py 2>/dev/null; }
+say() { wall -n "$1" 2>/dev/null; }
+reading() {   # sets PCT and CHG (bit 7 = charging)
+  local v; v=$(cat "$BAT" 2>/dev/null) || return 1
+  [[ "$v" =~ ^[0-9]+$ ]] || return 1
+  PCT=$((v & 127)); CHG=$(( (v & 128) ? 1 : 0 ))
+  [ "$PCT" -gt 0 ] && [ "$PCT" -le 100 ]
+}
+save_wifi_ip() {
+  local d a
+  for d in /sys/class/net/wl*; do
+    [ -e "$d" ] || continue
+    a=$(ip -4 -o addr show dev "${d##*/}" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1)
+    if [ -n "$a" ] && [ "$a" != "$(cat "$WCACHE" 2>/dev/null)" ]; then echo "$a" > "$WCACHE"; fi
+  done
+}
+LEVEL=0; NEXT_WARN=0; WARN_END=0; LOW=0; IPT=0
+rm -f "$A"; pkill -USR2 -f picocalc-overlay.py 2>/dev/null
+while true; do
+  NOW=$(date +%s)
+  [ "$NOW" -ge "$IPT" ] && { save_wifi_ip; IPT=$((NOW + 20)); }
+  if ! reading; then sleep 5; continue; fi
+  ALERTS=$(onoff BATTERY_ALERTS); AUTO=$(onoff BATTERY_AUTO_SHUTDOWN)
+  WARN=$(num BATTERY_WARN 15); WSEC=$(num BATTERY_WARN_SECONDS 8); WREP=$(num BATTERY_WARN_REPEAT 120)
+  CRIT=$(num BATTERY_CRITICAL 5); OFF=$(num BATTERY_SHUTDOWN 3); DELAY=$(num BATTERY_SHUTDOWN_DELAY 60)
+
+  if [ "$CHG" = 1 ] || [ "$PCT" -gt $((WARN + 2)) ]; then
+    noalert; LEVEL=0; LOW=0; NEXT_WARN=0; sleep 5; continue
+  fi
+
+  # two low readings in a row, then countdown
+  if [ "$AUTO" = on ] && [ "$PCT" -le "$OFF" ]; then
+    LOW=$((LOW + 1))
+    if [ "$LOW" -ge 2 ]; then
+      say "LyraCalc OS: battery $PCT % - shutting down in $DELAY seconds. Plug in the charger to cancel."
+      CANCEL=0; S=$DELAY
+      while [ "$S" -gt 0 ]; do
+        alert "CRIT:BATTERY $PCT% - SHUTDOWN IN $S S"
+        sleep 1; S=$((S - 1))
+        if [ $((S % 5)) = 0 ] && reading && { [ "$CHG" = 1 ] || [ "$PCT" -gt "$OFF" ]; }; then CANCEL=1; break; fi
+        [ "$(onoff BATTERY_AUTO_SHUTDOWN)" = off ] && { CANCEL=1; break; }
+      done
+      if [ "$CANCEL" = 1 ]; then
+        say "LyraCalc OS: shutdown cancelled."
+        alert "CRIT:SHUTDOWN CANCELLED"; sleep 5; noalert; LOW=0; LEVEL=0; continue
+      fi
+      alert "CRIT:SHUTTING DOWN"; say "LyraCalc OS: battery empty - shutting down now."
+      sleep 2; systemctl poweroff; sleep 60
+    fi
+    sleep 5; continue
+  fi
+  LOW=0
+
+  if [ "$ALERTS" = off ]; then noalert; LEVEL=0; sleep 5; continue; fi
+
+  if [ "$CRIT" -gt 0 ] && [ "$PCT" -le "$CRIT" ]; then
+    LEVEL=2
+    alert "CRIT:BATTERY $PCT% - CHARGE NOW"
+    sleep 5; continue
+  fi
+
+  if [ "$PCT" -le "$WARN" ] || [ "$LEVEL" -ge 1 ]; then
+    if [ "$LEVEL" != 1 ]; then
+      LEVEL=1; NEXT_WARN=0; noalert
+    fi
+    if [ "$NOW" -ge "$NEXT_WARN" ]; then
+      alert "WARN:BATTERY $PCT% - PLEASE CHARGE"
+      WARN_END=$((NOW + WSEC)); NEXT_WARN=$((NOW + WREP))
+      sleep "$WSEC"; noalert; continue
+    fi
+    [ "$NOW" -ge "$WARN_END" ] && noalert
+  fi
+  sleep 5
+done

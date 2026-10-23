@@ -1,0 +1,20 @@
+#!/bin/bash
+# lan           show USB LAN adapters / USB tethering with link and address
+# lan restart   ask for a new address on all of them
+DRV=" r8152 r8153_ecm asix ax88179_178a lan78xx cdc_ether cdc_eem cdc_ncm rndis_host ipheth smsc95xx dm9601 sr9700 "
+found=0
+for d in /sys/class/net/*; do
+  n=${d##*/}
+  drv=$(readlink -f "$d/device/driver" 2>/dev/null); drv=${drv##*/}
+  case "$DRV" in *" $drv "*) ;; *) continue ;; esac
+  [ -n "$drv" ] || continue
+  found=1
+  if [ "$1" = restart ]; then
+    systemctl restart "lan@$n.service" && echo "$n: asking for a new address..."
+    continue
+  fi
+  ip=$(ip -4 -o addr show dev "$n" | awk '{print $4}' | head -1)
+  sp=$(cat "$d/speed" 2>/dev/null); [ -n "$sp" ] && [ "$sp" -gt 0 ] 2>/dev/null && sp="$sp Mbit/s" || sp="-"
+  echo "$n  driver: $drv  link: $(cat "$d/operstate")  speed: $sp  IP: ${ip:-none}"
+done
+[ $found = 1 ] || echo "No USB LAN adapter or tethered phone found."

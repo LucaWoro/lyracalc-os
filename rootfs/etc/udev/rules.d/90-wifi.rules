@@ -1,0 +1,2 @@
+# start WiFi on new sticks (WIFI_AUTOSTART)
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wl*", RUN+="/usr/local/sbin/wifi-hotplug $name"

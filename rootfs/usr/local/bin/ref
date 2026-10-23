@@ -1,0 +1,44 @@
+#!/bin/bash
+# Offline cheat sheets
+#   ref                 list of topics
+#   ref python          open the Python cheat sheet
+#   ref python while    open it at the first place that mentions "while"
+D=/usr/local/share/lyracalc/ref
+if [ -t 1 ]; then R=$'\e[0m'; CY=$'\e[1;36m'; YE=$'\e[1;33m'; else R=; CY=; YE=; fi
+list() {
+  echo "${CY}== Cheat sheets (ref TOPIC [word]) ==${R}"
+  printf '  %s%-9s%s %s\n' "$YE" python "$R" "Python 3" "$YE" lua "$R" "Lua (PICO-8, TIC-80)" \
+    "$YE" c "$R" "C" "$YE" cpp "$R" "C++" "$YE" bash "$R" "Bash scripts" "$YE" make "$R" "Makefiles" \
+    "$YE" git "$R" "git" "$YE" sed "$R" "sed" "$YE" awk "$R" "awk" "$YE" markdown "$R" "Markdown" \
+    "$YE" vim "$R" "vim / nvim" "$YE" pico8 "$R" "PICO-8 manual (your copy)" "$YE" tic80 "$R" "TIC-80 help"
+  echo ""
+  echo "Inside: Ctrl+F = search, Ctrl+Q = quit (micro)"
+  echo "        /word = search, q = quit (less)"
+}
+case "$1" in
+  ""|-h|--help|list) list; exit 0 ;;
+  py|python3) T=python ;; c++) T=cpp ;; sh) T=bash ;; nvim) T=vim ;; pico-8) T=pico8 ;; tic-80) T=tic80 ;;
+  *) T=$1 ;;
+esac
+case "$T" in
+  pico8)
+    F=$(ls /root/pico-8/pico-8_manual.txt /root/pico-8/*manual*.txt 2>/dev/null | head -1)
+    [ -n "$F" ] || { echo "PICO-8 manual not found. It comes with PICO-8: run pico8install first."; exit 1; } ;;
+  tic80)
+    echo "TIC-80 has its help built in. In the TIC-80 console type:"
+    echo "  help          all help topics"
+    echo "  help api      all functions (spr, btn, map, ...)"
+    echo "  help keys     key codes"
+    exit 0 ;;
+  *)
+    F=$D/$T.md
+    [ -f "$F" ] || { echo "No cheat sheet for '$1'."; list; exit 1; } ;;
+esac
+LINE=1
+if [ -n "$2" ]; then
+  LINE=$(grep -n -i -m1 -- "$2" "$F" | cut -d: -f1)
+  [ -n "$LINE" ] || { echo "'$2' not found in $T, opening at the top."; LINE=1; sleep 1; }
+fi
+if command -v micro >/dev/null; then exec micro -readonly true "+$LINE" "$F"
+elif command -v less >/dev/null; then exec less -i "+${LINE}g" "$F"
+else exec more "+$LINE" "$F"; fi

@@ -1,0 +1,9 @@
+#!/bin/bash
+# List WiFi networks nearby
+. /usr/local/lib/picocalc/wifi-common.sh
+need_wifi
+echo "Searching for WiFi networks..."
+wifi_scan > /tmp/wifils.$$
+if [ ! -s /tmp/wifils.$$ ]; then echo "No networks found. Try again."; rm -f /tmp/wifils.$$; exit 1; fi
+print_table < /tmp/wifils.$$
+rm -f /tmp/wifils.$$

@@ -1,0 +1,55 @@
+From fb7f469ffc2ae8d14c653267368bfeabfcc95771 Mon Sep 17 00:00:00 2001
+From: LyraCalc OS <lyracalc-os@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 12:00:00 +0200
+Subject: [PATCH 4/6] dts: second SD card slot on SPI1 (mmc_spi)
+
+---
+ .../arm/boot/dts/rk3506-luckfox-lyra.dtsi     | 22 +++++++++++++++++++
+ .../arch/arm/configs/rk3506_luckfox_defconfig |  1 +
+ 2 files changed, 23 insertions(+)
+
+diff --git a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
+index 70328b98..062a1ec2 100644
+--- a/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
++++ b/kernel-6.1/arch/arm/boot/dts/rk3506-luckfox-lyra.dtsi
+@@ -1295,6 +1295,28 @@
+ 	};
+ };
+ 
++/* PicoCalc: second SD card slot (SPI mode) */
++/ {
++	aliases {
++		mmc0 = &mmc;
++		mmc1 = &spi_sdcard0;
++	};
++};
++
++&spi1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&rm_io28_spi1_mosi &rm_io29_spi1_clk &rm_io30_spi1_csn0 &rm_io31_spi1_miso>;
++
++	spi_sdcard0: spi-sdcard@0 {
++		compatible = "mmc-spi-slot";
++		reg = <0>;
++		spi-max-frequency = <50000000>;
++		voltage-ranges = <3300 3300>;
++		cd-gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_LOW>;
++	};
++};
++
+ /* PicoCalc: keep the sound pin (RMIO12 = GPIO0_B4) pulled low from early boot
+  * until the sound driver switches it to PWM -> no crackle while booting */
+ &pinctrl {
+diff --git a/kernel-6.1/arch/arm/configs/rk3506_luckfox_defconfig b/kernel-6.1/arch/arm/configs/rk3506_luckfox_defconfig
+index 500d248c..e3267585 100644
+--- a/kernel-6.1/arch/arm/configs/rk3506_luckfox_defconfig
++++ b/kernel-6.1/arch/arm/configs/rk3506_luckfox_defconfig
+@@ -392,3 +392,4 @@ CONFIG_BOOTPARAM_RCU_STALL_PANIC=y
+ # CONFIG_FTRACE is not set
+ CONFIG_DEBUG_USER=y
+ # CONFIG_RUNTIME_TESTING_MENU is not set
++CONFIG_MMC_SPI=m
+-- 
+2.43.0
+

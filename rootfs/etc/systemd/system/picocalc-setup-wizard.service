@@ -1,0 +1,21 @@
+[Unit]
+Description=PicoCalc setup wizard (while SETUP_WIZARD=on)
+After=picocalc-firstboot.service systemd-user-sessions.service
+Before=getty@tty1.service
+ConditionPathExists=/dev/tty1
+
+[Service]
+Type=oneshot
+ExecCondition=/bin/sh -c 'grep -q "^SETUP_WIZARD=on" /etc/picocalc.conf'
+ExecStart=/usr/local/bin/picocalc-setup --boot
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+Environment=TERM=linux
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

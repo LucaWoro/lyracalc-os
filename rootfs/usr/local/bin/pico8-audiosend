@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# Stream the PICO-8 sound over TCP; data the client does not take right away
+# is dropped, so the delay never grows
+import socket, subprocess, select
+IP, PORT = "192.168.123.100", 5901
+CMD = ["arecord", "-q", "-D", "plughw:Loopback,1,0", "-f", "S16_LE", "-r", "44100",
+       "-c", "1", "-t", "raw", "--period-time=10000", "--buffer-time=40000"]
+srv = socket.socket()
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind((IP, PORT))
+srv.listen(1)
+while True:
+    c, _ = srv.accept()
+    c.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 4096)
+    c.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    p = subprocess.Popen(CMD, stdout=subprocess.PIPE, bufsize=0)
+    try:
+        while True:
+            d = p.stdout.read(882)            # 10 ms
+            if not d:
+                break
+            _, w, _ = select.select([], [c], [], 0)
+            if w:
+                c.sendall(d)
+    except OSError:
+        pass
+    finally:
+        p.kill(); p.wait(); c.close()

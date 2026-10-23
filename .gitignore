@@ -1,0 +1,5 @@
+kernel/out/
+kernel/rk3506-ubuntu-luckfox-lyra-w-picocalc/
+tic80/tic80
+*.img
+*.img.xz

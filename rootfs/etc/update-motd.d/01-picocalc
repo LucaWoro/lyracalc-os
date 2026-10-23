@@ -1,0 +1,63 @@
+#!/bin/bash
+# Login info screen
+W='\e[1;37m'; Y='\e[1;33m'; C='\e[1;36m'; G='\e[0;32m'; D='\e[1;30m'; N='\e[0m'
+LC_NAME="LyraCalc OS"; LC_VERSION=""
+[ -r /etc/lyracalc-release ] && . /etc/lyracalc-release
+UP=$(uptime -p | sed 's/^up //; s/ days\?/d/; s/ hours\?/h/; s/ minutes\?/m/; s/,//g')
+MEM=$(free -m | awk '/^Mem:/ {printf "%d/%d MB", $3, $2}')
+DSK=$(df -h / | awk 'NR==2 {printf "%s/%s", $3, $2}')
+TMP=""
+[ -r /sys/class/thermal/thermal_zone0/temp ] && TMP="$(( $(cat /sys/class/thermal/thermal_zone0/temp) / 1000 )) C"
+# wl* = WiFi, USB LAN drivers = LAN, anything else = USB gadget
+LANDRV=" r8152 r8153_ecm asix ax88179_178a lan78xx cdc_ether cdc_eem cdc_ncm rndis_host ipheth smsc95xx dm9601 sr9700 "
+WIFI=""; USB=""; LAN=""
+for d in /sys/class/net/*; do
+  n=${d##*/}; [ "$n" = lo ] && continue
+  a=$(ip -4 -o addr show dev "$n" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1)
+  [ -n "$a" ] || continue
+  drv=$(readlink -f "$d/device/driver" 2>/dev/null); drv=${drv##*/}
+  case "$n" in
+    wl*) WIFI=$a ;;
+    *) case "$LANDRV" in *" $drv "*) LAN=$a ;; *) USB=$a ;; esac ;;
+  esac
+done
+# no WiFi address yet: show the last one in grey
+WCACHE=/var/lib/lyracalc/wifi-ip
+if [ -n "$WIFI" ]; then
+  WTXT=$WIFI; [ "$(cat "$WCACHE" 2>/dev/null)" = "$WIFI" ] || echo "$WIFI" > "$WCACHE" 2>/dev/null
+else
+  LAST=$(cat "$WCACHE" 2>/dev/null)
+  if [ -n "$LAST" ]; then
+    WTXT="${D}${LAST}"; [ ${#LAST} -le 13 ] && WTXT="$WTXT (last)"; WTXT="$WTXT${N}"
+  else
+    WTXT=off
+  fi
+fi
+ART=(
+'    .--.    '
+'   |o_o |   '
+'   |:_/ |   '
+'  //   \ \  '
+' (|     | ) '
+"/'\\_   _/\`\\ "
+'\___)=(___/ '
+)
+INFO=(
+"${C}LuckFox Lyra${N}"
+"${D}--------------${N}"
+"${G}OS     ${N}${LC_NAME} ${LC_VERSION}"
+"${G}Kernel ${N}$(uname -r)"
+"${G}Uptime ${N}${UP}"
+"${G}RAM    ${N}${MEM}"
+"${G}Disk   ${N}${DSK}"
+"${G}WiFi   ${N}${WTXT}"
+"${G}USB    ${N}${USB:-not connected}"
+)
+[ -n "$LAN" ] && INFO+=("${G}LAN    ${N}${LAN}")
+INFO+=("${G}Temp   ${N}${TMP:-n/a}")
+echo
+for i in "${!INFO[@]}"; do
+  [ "$i" -lt 5 ] && F=$W || F=$Y
+  printf '%b%-12s%b %b\n' "$F" "${ART[$i]}" "$N" "${INFO[$i]}"
+done
+echo

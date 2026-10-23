@@ -1,0 +1,4 @@
+#!/bin/sh
+# udev: start WiFi on a new stick unless WIFI_AUTOSTART=off
+grep -q "^WIFI_AUTOSTART=off" /etc/picocalc.conf 2>/dev/null && exit 0
+systemctl --no-block start "wifi@$1.service"

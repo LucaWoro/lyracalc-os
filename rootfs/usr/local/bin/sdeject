@@ -1,0 +1,14 @@
+#!/bin/sh
+# Unmount the card in the PicoCalc SD slot
+sync
+found=0
+for m in $(findmnt -rn -o TARGET -S /dev/mmcblk1 2>/dev/null) \
+         $(for p in /dev/mmcblk1p*; do findmnt -rn -o TARGET -S "$p" 2>/dev/null; done); do
+  systemd-umount "$m" && found=1
+done
+sync
+if [ "$found" = 1 ]; then
+  echo "SD card unmounted. It is now safe to remove it."
+else
+  echo "No SD card mounted."
+fi

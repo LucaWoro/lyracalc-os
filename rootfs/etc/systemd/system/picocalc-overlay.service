@@ -1,0 +1,11 @@
+[Unit]
+Description=PicoCalc status bar
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/picocalc-overlay.py
+Restart=always
+RestartSec=2
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

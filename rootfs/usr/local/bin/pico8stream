@@ -1,0 +1,17 @@
+#!/bin/bash
+# PICO-8 at 128x128 for a PC on the USB network: picture via VNC (5900), sound via TCP (5901)
+IP=192.168.123.100
+modprobe snd-aloop 2>/dev/null
+/usr/local/bin/pico8-audiosend 2>/dev/null &
+(
+  for _ in $(seq 40); do
+    [ -e /tmp/.X11-unix/X0 ] && x11vnc -display :0 -forever -shared -nopw \
+      -listen $IP -threads -defer 1 -wait 2 -nonap -speeds lan \
+      -noxdamage -clip 128x128+96+96 -quiet -bg -o /tmp/x11vnc.log 2>/dev/null && break
+    sleep 0.5
+  done
+) &
+AUDIODEV=plughw:Loopback,0,0 pico8 -draw_rect 96,96,128,128 -pixel_perfect 1 "$@"
+pkill x11vnc 2>/dev/null
+pkill socat 2>/dev/null
+pkill -f pico8-audiosend 2>/dev/null

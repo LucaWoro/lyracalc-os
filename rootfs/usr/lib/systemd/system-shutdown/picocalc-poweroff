@@ -1,0 +1,5 @@
+#!/bin/sh
+# poweroff only: the keyboard controller cuts the power after 3 s
+[ "$1" = "poweroff" ] || exit 0
+echo 3 > /sys/firmware/picocalc/power_off 2>/dev/null
+exit 0

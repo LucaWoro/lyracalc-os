@@ -1,0 +1,42 @@
+#!/bin/bash
+# Install PICO-8 from the Raspberry Pi zip (lexaloffle.com)
+#   pico8install              looks on the SD card and in /root
+#   pico8install FILE.zip
+DEST=/root/pico-8
+CFG=/root/.lexaloffle/pico-8/config.txt
+ZIP="$1"
+if [ -z "$ZIP" ]; then
+  ZIP=$(ls -t /mnt/sd/pico-8*raspi*.zip /mnt/sd/pico8/pico-8*raspi*.zip /root/pico-8*raspi*.zip 2>/dev/null | head -1)
+fi
+if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
+  echo "No PICO-8 zip found."
+  echo "Buy/download PICO-8 at lexaloffle.com, take the 'Raspberry Pi' version"
+  echo "(pico-8_..._raspi.zip), copy it to the SD card and run pico8install again."
+  exit 1
+fi
+echo "Installing from: $ZIP"
+TMP=$(mktemp -d)
+python3 -m zipfile -e "$ZIP" "$TMP" || { echo "Could not unpack the zip."; rm -rf "$TMP"; exit 1; }
+SRC=$(dirname "$(find "$TMP" -name pico8_dyn -type f | head -1)")
+if [ -z "$SRC" ] || [ ! -f "$SRC/pico8_dyn" ]; then
+  echo "This zip does not contain pico8_dyn. Please use the Raspberry Pi version."
+  rm -rf "$TMP"; exit 1
+fi
+if [ -d "$DEST" ]; then
+  OLD=$DEST.old-$(date +%Y%m%d-%H%M)
+  mv "$DEST" "$OLD"; echo "Previous version moved to $OLD"
+fi
+mv "$SRC" "$DEST"
+rm -rf "$TMP"
+chmod +x "$DEST"/pico8* 2>/dev/null || true
+
+mkdir -p "$(dirname "$CFG")" /root/.lexaloffle/pico-8/carts
+touch "$CFG"
+setkey() { if grep -q "^$1 " "$CFG"; then sed -i "s/^$1 .*/$1 $2/" "$CFG"; else echo "$1 $2" >> "$CFG"; fi; }
+setkey blit_method 1
+setkey mix_buffer_size 1024
+setkey show_fps 0
+ln -sfn /mnt/sd/pico8 /root/.lexaloffle/pico-8/carts/sd
+[ -d /mnt/sd ] && mountpoint -q /mnt/sd && mkdir -p /mnt/sd/pico8
+echo ""
+echo "PICO-8 installed. Start it with: pico8   (game browser: pico8browser)"

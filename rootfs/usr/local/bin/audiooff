@@ -1,0 +1,6 @@
+#!/bin/sh
+# Mute sound (saved as AUDIO_MUTE=on in /etc/picocalc.conf)
+. /usr/local/lib/picocalc/conf.sh
+pc_set AUDIO_MUTE on
+/usr/local/sbin/picocalc-apply audio >/dev/null
+echo "Sound muted. Use audioon to switch it back on."

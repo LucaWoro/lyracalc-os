@@ -1,0 +1,6 @@
+#!/bin/sh
+# modprobe install hook for picocalc_snd_pwm: skipped while AUDIO=off
+if grep -qiE '^[[:space:]]*AUDIO[[:space:]]*=[[:space:]]*"?(off|0|no|disabled)"?[[:space:]]*$' /etc/picocalc.conf 2>/dev/null; then
+  exit 0
+fi
+exec /sbin/modprobe --ignore-install picocalc_snd_pwm $CMDLINE_OPTS
