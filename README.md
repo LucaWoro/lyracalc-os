@@ -114,5 +114,7 @@ The scripts and files in this repository are MIT licensed ([LICENSE](LICENSE)), 
 folder says otherwise: the kernel patches are GPL-2.0, the keyboard firmware patch is LGPL-3.0, TIC-80 is MIT (see [tic80/licenses](tic80/licenses)),
 the cheat sheets in `rootfs/usr/local/share/lyracalc/ref` are CC BY-SA 3.0.
 
+If you build on LyraCalc OS, a mention and a link back to this repository are appreciated.
+
 PICO-8 is commercial software by Lexaloffle and is not included.
 "Ubuntu" is a trademark of Canonical Ltd. LyraCalc OS is not affiliated with Canonical, ClockworkPi or Luckfox.
