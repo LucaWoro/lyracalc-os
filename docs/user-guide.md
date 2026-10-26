@@ -2,6 +2,7 @@
 
 - [First boot](#first-boot)
 - [Commands](#commands)
+- [USB and Bluetooth devices](#usb-and-bluetooth-devices)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Status bar](#status-bar)
 - [Battery](#battery)
@@ -141,6 +142,13 @@ from [Learn X in Y minutes](https://learnxinyminutes.com) (CC BY-SA 3.0). Man pa
 | `esp-ls` | list the files on the ESP32 |
 
 Firmware files are in `/usr/local/share/lyracalc/esp-firmware`; newer ones can be put into `~/esp/firmware`.
+
+## USB and Bluetooth devices
+
+USB keyboards and mice work right away, Bluetooth ones after `btpair`. A mouse moves a pointer in the
+console (gpm: select text with the left button, paste with the middle button) and works in PICO-8 and
+TIC-80. For a USB keyboard with another layout set `USB_KEYBOARD_LAYOUT` (and `USB_KEYBOARD_VARIANT`)
+in the settings; the PicoCalc keyboard always stays US.
 
 ## Keyboard shortcuts
 
@@ -300,6 +308,12 @@ ILI9488 at 100 MHz SPI. The driver provides `/dev/fb_overlay` for the status bar
 
 `mmc_spi` on SPI1 at up to 50 MHz, the card is `/dev/mmcblk1`. FAT32, ext4 and NTFS cards are mounted
 at `/mnt/sd`. A shutdown hook unloads `mmc_spi`, otherwise a card left in SPI mode stops the reboot.
+
+### Power
+
+`poweroff` shuts Linux down, then the keyboard controller switches the whole PicoCalc off after 3
+seconds. `reboot` keeps it on. The board has 128 MB RAM (about 103 MB usable); a 64 MB compressed swap
+in RAM (zram) gives some headroom.
 
 ### Lyra USB-C port
 

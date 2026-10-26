@@ -11,22 +11,31 @@ tinkering and PICO-8 / TIC-80 games.
 >
 > - **Sound needs a hardware mod on the Lyra** (one 0 Ω resistor removed, one wire bridge), see
 >   [docs/hardware.md](docs/hardware.md). Without it the speakers stay silent; set `AUDIO=off`.
-> - **Known bug:** after the PicoCalc was off for several hours, the speakers can hiss after boot and the
->   noise does not stop. Until this is fixed, turn the volume wheel down or set `AUDIO=off`.
+> - **Use at your own risk.** No warranty and no liability for damage to hardware, batteries or data,
+>   especially when flashing the keyboard firmware or soldering. See [DISCLAIMER.md](DISCLAIMER.md).
+> - **Known bug (sound mod):** while booting, the speakers can crackle or hiss loudly. **Turn the volume
+>   wheel down before switching the PicoCalc on.** After the PicoCalc was off for several hours, the hiss
+>   can also stay after boot; then keep the volume down or set `AUDIO=off`. A fix is planned.
 
 ## Features
 
 - Console UI made for the 320x320 screen: login picture, info screen with IP addresses, selectable fonts
 - Status bar (Alt+O) with FPS, CPU, RAM, SD speed, WiFi, sound, temperature and battery, drawn by the display driver so it never flickers
 - Battery warnings in the status bar and automatic shutdown when the battery is empty
-- PICO-8 (bring your own copy) with keyboard mouse and a game mode for the PicoCalc keys
+- PICO-8 (bring your own copy) with keyboard mouse (Shift+arrows) and a game mode for the PicoCalc keys (Alt+G)
 - TIC-80 (free version) built for the Lyra
-- USB WiFi sticks (Realtek, MediaTek, Ralink, Atheros), Bluetooth, USB LAN adapters and phone tethering
+- USB WiFi sticks (Realtek, MediaTek, Ralink, Atheros), Bluetooth, USB LAN adapters and phone tethering,
+  see the [supported adapters](docs/user-guide.md#supported-usb-adapters)
+- USB and Bluetooth keyboards and mice, with a layout setting for USB keyboards and a mouse pointer in the console
+- Keyboard driver fixes: no more stuck keys, both Shift keys work, key repeat and mouse speed adjustable
 - Simple commands for everything: `wifisetup`, `btpair`, `audioon`, `files`, `apps`, `ref`, ...
 - Second SD card slot with automount
 - Sound driver with standby and soft fades (needs a hardware mod)
 - One settings file, `/etc/picocalc.conf`, and a setup wizard on first boot
-- Developer tools: micro with linters for Bash, Lua, Python and C, offline cheat sheets, ESP32 / MicroPython flashing
+- Developer tools: micro with syntax highlighting and error checking on save (Bash, Lua, Python, C/C++),
+  offline cheat sheets, ESP32 / MicroPython flashing
+- SSH and a USB network link to the PC out of the box
+- The PicoCalc switches itself off after `poweroff`; compressed swap in RAM (zram)
 
 ## Hardware
 
@@ -85,11 +94,17 @@ See [docs/building.md](docs/building.md).
 
 ## Known issues
 
-- After several hours off, the speakers can hiss after boot and keep hissing (with the sound mod). Turn the volume down or set `AUDIO=off`.
+- With the sound mod, the speakers can crackle or hiss loudly while booting; turn the volume down before switching on. After several hours off, the hiss can stay after boot; keep the volume down or set `AUDIO=off`.
 - Charging over the Lyra USB port is not visible to the keyboard controller, so the battery icon shows no charging sign.
 - The Lyra does not supply 5 V on its USB-C port. USB devices need a powered hub or an OTG Y-cable.
 - Many WiFi chipsets are built in but not tested yet. Reports are welcome.
 - The Bluetooth part of the RTL8851BU (TP-Link TX10UB) does not work yet.
+
+## Disclaimer
+
+LyraCalc OS is provided "as is", without warranty of any kind. You use the software, the firmware and
+the hardware instructions at your own risk; the authors are not liable for any damage. Details:
+[DISCLAIMER.md](DISCLAIMER.md).
 
 ## Credits and licence
 

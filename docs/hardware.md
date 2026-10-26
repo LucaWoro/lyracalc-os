@@ -1,5 +1,9 @@
 # Hardware mods
 
+> **At your own risk.** Soldering can damage the Luckfox Lyra or the PicoCalc and may void the warranty.
+> Remove the batteries and unplug USB before you start. There is no warranty and no liability for any
+> damage, see [DISCLAIMER.md](../DISCLAIMER.md).
+
 ## Sound
 
 **Needed for any sound.** On a stock PicoCalc with a Luckfox Lyra the speaker amplifier is wired to a Lyra
@@ -17,8 +21,11 @@ The volume is set with the PicoCalc volume wheel. `audiooff` and `audioon` mute 
 `AUDIO=off` in the settings keeps the driver from loading.
 
 The device tree keeps the pin pulled low from early boot and the driver fades the output in and out to
-avoid pops. Known problem: after the PicoCalc was off for several hours, the speakers can hiss after boot and keep
-hissing; turn the volume down or set `AUDIO=off` until this is fixed.
+avoid pops.
+
+Known problem: while booting, the speakers can crackle or hiss loudly, so turn the volume wheel down
+before switching the PicoCalc on. After the PicoCalc was off for several hours, the hiss can also stay
+after boot; keep the volume down or set `AUDIO=off`. A fix is planned for a later version.
 
 ## Keyboard firmware
 
