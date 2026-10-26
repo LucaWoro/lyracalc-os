@@ -25,5 +25,5 @@ projects keep their own licences:
 
 - kernel/patches: GPL-2.0, like the Linux files they change
 - tic80/patches and tic80/licenses: TIC-80 (MIT) and its libraries
-- firmware/stm32: patch for picocalc_BIOS, under the licence of that project
+- firmware/stm32: patch for picocalc_BIOS, LGPL-3.0 like that project
 - rootfs/usr/local/share/lyracalc/ref: Learn X in Y minutes, CC BY-SA 3.0

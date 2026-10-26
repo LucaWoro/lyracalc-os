@@ -146,7 +146,7 @@ Firmware files are in `/usr/local/share/lyracalc/esp-firmware`; newer ones can b
 
 | Keys | Where | |
 |---|---|---|
-| Alt+O | everywhere | show or hide the status bar (needs the [STM32 patch](../firmware/stm32)) |
+| Alt+O | everywhere | show or hide the status bar (needs the [LyraCalc keyboard firmware](../firmware/stm32)) |
 | Alt+G | PICO-8 | game mode on or off |
 | Shift+arrows | PICO-8, TIC-80 | move the mouse pointer |
 | Ctrl+[ , Ctrl+] | PICO-8, TIC-80 | right and left click |
